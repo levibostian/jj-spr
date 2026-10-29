@@ -29,12 +29,20 @@ func publish(ctx context.Context, jjc *jj.Client, ghc *gh.Client, st *Stack, opt
 	res := &Result{}
 	active := st.Active()
 
-	var branches []string
 	for _, e := range st.Entries {
 		if e.Retired() && e.PR != nil {
 			res.Retired = append(res.Retired, e.PR.Number)
 		}
 	}
+
+	// Make PR bases safe before any branch is pushed. A reorder can leave a
+	// PR whose head is an ancestor of its base, which GitHub resolves by
+	// merging the PR.
+	if err := prepareStack(ctx, ghc, st, active); err != nil {
+		return nil, err
+	}
+
+	var branches []string
 	for _, e := range active {
 		if err := jjc.SetBookmark(ctx, e.Branch, e.Commit.ChangeID); err != nil {
 			return nil, err
@@ -47,11 +55,7 @@ func publish(ctx context.Context, jjc *jj.Client, ghc *gh.Client, st *Stack, opt
 
 	prs := make([]int, 0, len(active))
 	for i, e := range active {
-		base := st.BaseBranch
-		if i > 0 {
-			base = active[i-1].Branch
-		}
-		number, err := ensurePR(ctx, ghc, e, base, opts.Draft, res)
+		number, err := ensurePR(ctx, ghc, e, desiredBase(st, active, i), opts.Draft, res)
 		if err != nil {
 			return nil, err
 		}
@@ -86,12 +90,71 @@ func ensurePR(ctx context.Context, ghc *gh.Client, e Entry, base string, draft b
 		}
 		res.Updated = append(res.Updated, e.PR.Number)
 	}
-	if e.PR.BaseRefName != base {
-		if err := ghc.EditPRBase(ctx, e.PR.Number, base); err != nil {
-			return 0, err
+	return e.PR.Number, nil
+}
+
+// desiredBase is the branch the i-th active entry should target.
+func desiredBase(st *Stack, active []Entry, i int) string {
+	if i == 0 {
+		return st.BaseBranch
+	}
+	return active[i-1].Branch
+}
+
+// prepareStack makes PR bases safe before branches are pushed. It unstacks the
+// current stack when it cannot be updated by appending, then retargets the PRs
+// that moved down the stack: their new base is currently an ancestor of their
+// head, so the edit succeeds and prevents the pushed commit from being an
+// ancestor of its base. PRs that moved up are left for gh stack link to
+// retarget after the push.
+func prepareStack(ctx context.Context, ghc *gh.Client, st *Stack, active []Entry) error {
+	var prs []int
+	for _, e := range active {
+		if e.PR != nil {
+			prs = append(prs, e.PR.Number)
 		}
 	}
-	return e.PR.Number, nil
+	if len(prs) == 0 {
+		return nil
+	}
+	current, err := ghc.FindStackForPR(ctx, prs[0])
+	if err != nil {
+		return err
+	}
+	oldIndex := make(map[int]int)
+	newIndex := make(map[int]int)
+	if current != nil {
+		for i, n := range current.OpenPRs() {
+			oldIndex[n] = i
+		}
+	}
+	pos := 0
+	for _, e := range active {
+		if e.PR != nil {
+			newIndex[e.PR.Number] = pos
+			pos++
+		}
+	}
+	if current != nil && (current.HasMerged() || !isOrderedPrefix(current.OpenPRs(), prs)) {
+		if err := ghc.Unstack(ctx, current.Number); err != nil {
+			return err
+		}
+	}
+	for i, e := range active {
+		if e.PR == nil {
+			continue
+		}
+		old, ok := oldIndex[e.PR.Number]
+		if !ok || newIndex[e.PR.Number] >= old {
+			continue // not stacked, or moved up
+		}
+		if base := desiredBase(st, active, i); e.PR.BaseRefName != base {
+			if err := ghc.EditPRBase(ctx, e.PR.Number, base); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 // Reconcile makes the native GitHub stack match prs (bottom to top).
