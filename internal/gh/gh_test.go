@@ -8,24 +8,24 @@ import (
 	"github.com/levibostian/jj-spr/internal/runner"
 )
 
-func fake(handler func(runner.Command) (string, error)) (*Client, *runner.Fake) {
+func newClient(handler func(runner.Command) (string, error)) (*Client, *runner.Fake) {
 	f := &runner.Fake{Handler: handler}
 	return &Client{R: f}, f
 }
 
 func TestAvailable(t *testing.T) {
-	c, _ := fake(func(runner.Command) (string, error) { return "", nil })
+	c, _ := newClient(func(runner.Command) (string, error) { return "", nil })
 	if err := c.Available(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	c2, _ := fake(func(runner.Command) (string, error) { return "", context.DeadlineExceeded })
+	c2, _ := newClient(func(runner.Command) (string, error) { return "", context.DeadlineExceeded })
 	if err := c2.Available(context.Background()); err == nil {
 		t.Fatal("want error")
 	}
 }
 
 func TestOwnerAndDefaultBranch(t *testing.T) {
-	c, f := fake(func(runner.Command) (string, error) { return "levibostian\n", nil })
+	c, f := newClient(func(runner.Command) (string, error) { return "levibostian\n", nil })
 	if got, _ := c.Owner(context.Background()); got != "levibostian" {
 		t.Fatalf("got %q", got)
 	}
@@ -39,7 +39,7 @@ func TestOwnerAndDefaultBranch(t *testing.T) {
 
 func TestFindPR(t *testing.T) {
 	out := `[{"number":42,"state":"open","draft":false,"title":"t","body":"b","html_url":"https://x/pull/42","head":{"ref":"mystack/x"},"base":{"ref":"main"}}]`
-	c, f := fake(func(runner.Command) (string, error) { return out, nil })
+	c, f := newClient(func(runner.Command) (string, error) { return out, nil })
 	pr, err := c.FindPR(context.Background(), "levibostian", "mystack/x")
 	if err != nil {
 		t.Fatal(err)
@@ -54,7 +54,7 @@ func TestFindPR(t *testing.T) {
 }
 
 func TestFindPRNone(t *testing.T) {
-	c, _ := fake(func(runner.Command) (string, error) { return "[]", nil })
+	c, _ := newClient(func(runner.Command) (string, error) { return "[]", nil })
 	pr, err := c.FindPR(context.Background(), "o", "b")
 	if err != nil || pr != nil {
 		t.Fatalf("got %+v %v", pr, err)
@@ -62,7 +62,7 @@ func TestFindPRNone(t *testing.T) {
 }
 
 func TestCreatePR(t *testing.T) {
-	c, f := fake(func(runner.Command) (string, error) { return "https://github.com/o/r/pull/7\n", nil })
+	c, f := newClient(func(runner.Command) (string, error) { return "https://github.com/o/r/pull/7\n", nil })
 	n, err := c.CreatePR(context.Background(), "mystack/x", "main", "title", "body", true)
 	if err != nil || n != 7 {
 		t.Fatalf("got %d %v", n, err)
@@ -73,14 +73,14 @@ func TestCreatePR(t *testing.T) {
 }
 
 func TestCreatePRBadOutput(t *testing.T) {
-	c, _ := fake(func(runner.Command) (string, error) { return "nope", nil })
+	c, _ := newClient(func(runner.Command) (string, error) { return "nope", nil })
 	if _, err := c.CreatePR(context.Background(), "h", "b", "t", "", false); err == nil {
 		t.Fatal("want error")
 	}
 }
 
 func TestEditPR(t *testing.T) {
-	c, f := fake(func(runner.Command) (string, error) { return "", nil })
+	c, f := newClient(func(runner.Command) (string, error) { return "", nil })
 	if err := c.EditPR(context.Background(), 3, "t", "b"); err != nil {
 		t.Fatal(err)
 	}
@@ -94,7 +94,7 @@ func TestEditPR(t *testing.T) {
 
 func TestViewPR(t *testing.T) {
 	out := `{"number":1,"title":"t","state":"OPEN","isDraft":false,"mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","reviewDecision":"APPROVED","statusCheckRollup":[{"state":"SUCCESS"}],"url":"u","baseRefName":"main"}`
-	c, _ := fake(func(runner.Command) (string, error) { return out, nil })
+	c, _ := newClient(func(runner.Command) (string, error) { return out, nil })
 	pr, err := c.ViewPR(context.Background(), "mystack/x")
 	if err != nil {
 		t.Fatal(err)
@@ -106,7 +106,7 @@ func TestViewPR(t *testing.T) {
 
 func TestRemoteStackHelpers(t *testing.T) {
 	out := `[{"number":9,"pull_requests":[{"number":1,"state":"closed","merged_at":"2024-01-01"},{"number":2,"state":"open","merged_at":null}]}]`
-	c, _ := fake(func(runner.Command) (string, error) { return out, nil })
+	c, _ := newClient(func(runner.Command) (string, error) { return out, nil })
 	s, err := c.FindStackForPR(context.Background(), 2)
 	if err != nil {
 		t.Fatal(err)
@@ -114,14 +114,14 @@ func TestRemoteStackHelpers(t *testing.T) {
 	if s.Number != 9 || !s.HasMerged() || len(s.OpenPRs()) != 1 || s.OpenPRs()[0] != 2 {
 		t.Fatalf("got %+v open=%v", s, s.OpenPRs())
 	}
-	c2, _ := fake(func(runner.Command) (string, error) { return "[]", nil })
+	c2, _ := newClient(func(runner.Command) (string, error) { return "[]", nil })
 	if s, _ := c2.FindStackForPR(context.Background(), 2); s != nil {
 		t.Fatal("want nil")
 	}
 }
 
 func TestUnstack(t *testing.T) {
-	c, f := fake(func(runner.Command) (string, error) { return "", nil })
+	c, f := newClient(func(runner.Command) (string, error) { return "", nil })
 	if err := c.Unstack(context.Background(), 9); err != nil {
 		t.Fatal(err)
 	}
@@ -131,7 +131,7 @@ func TestUnstack(t *testing.T) {
 }
 
 func TestStackLink(t *testing.T) {
-	c, f := fake(func(runner.Command) (string, error) { return "", nil })
+	c, f := newClient(func(runner.Command) (string, error) { return "", nil })
 	if err := c.StackLink(context.Background(), "main", []int{1, 2, 3}); err != nil {
 		t.Fatal(err)
 	}

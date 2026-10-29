@@ -34,7 +34,9 @@ type PR struct {
 }
 
 // Merged reports whether the PR has been merged.
-func (p PR) Merged() bool { return p.MergedAt != nil && *p.MergedAt != "" }
+func (p PR) Merged() bool { return mergedAt(p.MergedAt) }
+
+func mergedAt(t *string) bool { return t != nil && *t != "" }
 
 // Retired reports whether the PR should be left out of the published stack.
 func (p PR) Retired() bool { return p.Merged() || strings.EqualFold(p.State, "closed") }
@@ -140,8 +142,8 @@ func (c *Client) CreatePR(ctx context.Context, head, base, title, body string, d
 // EditPR updates a PR's title and body.
 func (c *Client) EditPR(ctx context.Context, number int, title, body string) error {
 	_, err := c.R.Run(ctx, runner.Command{
-		Name: "gh",
-		Args: []string{"pr", "edit", strconv.Itoa(number), "--title", title, "--body-file", "-"},
+		Name:  "gh",
+		Args:  []string{"pr", "edit", strconv.Itoa(number), "--title", title, "--body-file", "-"},
 		Stdin: body,
 	})
 	return err
@@ -183,7 +185,7 @@ type RemoteStack struct {
 func (s *RemoteStack) OpenPRs() []int {
 	var out []int
 	for _, p := range s.PullRequests {
-		if strings.EqualFold(p.State, "open") && (p.MergedAt == nil || *p.MergedAt == "") {
+		if strings.EqualFold(p.State, "open") && !mergedAt(p.MergedAt) {
 			out = append(out, p.Number)
 		}
 	}
@@ -193,7 +195,7 @@ func (s *RemoteStack) OpenPRs() []int {
 // HasMerged reports whether any PR in the stack is merged.
 func (s *RemoteStack) HasMerged() bool {
 	for _, p := range s.PullRequests {
-		if p.MergedAt != nil && *p.MergedAt != "" {
+		if mergedAt(p.MergedAt) {
 			return true
 		}
 	}

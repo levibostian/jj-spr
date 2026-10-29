@@ -18,7 +18,6 @@ type Client struct {
 // Commit is the subset of a jj commit the tool cares about.
 type Commit struct {
 	ChangeID    string
-	CommitID    string
 	Description string
 	Empty       bool
 }
@@ -45,7 +44,6 @@ type Bookmark struct {
 }
 
 type wireCommit struct {
-	CommitID    string `json:"commit_id"`
 	ChangeID    string `json:"change_id"`
 	Description string `json:"description"`
 }
@@ -74,7 +72,6 @@ func (c *Client) Log(ctx context.Context, revset string) ([]Commit, error) {
 		}
 		commits = append(commits, Commit{
 			ChangeID:    w.ChangeID,
-			CommitID:    w.CommitID,
 			Description: w.Description,
 			Empty:       flags == "1",
 		})

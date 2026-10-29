@@ -8,7 +8,7 @@ import (
 	"github.com/levibostian/jj-spr/internal/runner"
 )
 
-func run(t *testing.T, out string, err error) (*Client, *runner.Fake) {
+func newClient(t *testing.T, out string, err error) (*Client, *runner.Fake) {
 	t.Helper()
 	f := &runner.Fake{Handler: func(runner.Command) (string, error) { return out, err }}
 	return &Client{R: f}, f
@@ -30,7 +30,7 @@ func TestCommitTitleBody(t *testing.T) {
 func TestLogParsesCommits(t *testing.T) {
 	out := `{"commit_id":"a","change_id":"x","description":"one\n"}` + "\x1f" + "0\n" +
 		`{"commit_id":"b","change_id":"y","description":"two\n\nbody\n"}` + "\x1f" + "1\n"
-	c, _ := run(t, out, nil)
+	c, _ := newClient(t, out, nil)
 	got, err := c.Log(context.Background(), "trunk()..H")
 	if err != nil {
 		t.Fatal(err)
@@ -41,14 +41,14 @@ func TestLogParsesCommits(t *testing.T) {
 }
 
 func TestLogRejectsMalformed(t *testing.T) {
-	c, _ := run(t, "not json\x1f0\n", nil)
+	c, _ := newClient(t, "not json\x1f0\n", nil)
 	if _, err := c.Log(context.Background(), "r"); err == nil {
 		t.Fatal("want error")
 	}
 }
 
 func TestBookmarksParse(t *testing.T) {
-	c, _ := run(t, "mystack\tx\nremote@origin\t\nmystack/y\ty\n", nil)
+	c, _ := newClient(t, "mystack\tx\nremote@origin\t\nmystack/y\ty\n", nil)
 	got, err := c.Bookmarks(context.Background())
 	if err != nil {
 		t.Fatal(err)
@@ -59,7 +59,7 @@ func TestBookmarksParse(t *testing.T) {
 }
 
 func TestSetBookmarkArgs(t *testing.T) {
-	c, f := run(t, "", nil)
+	c, f := newClient(t, "", nil)
 	if err := c.SetBookmark(context.Background(), "mystack/x", "x"); err != nil {
 		t.Fatal(err)
 	}
@@ -70,7 +70,7 @@ func TestSetBookmarkArgs(t *testing.T) {
 }
 
 func TestPush(t *testing.T) {
-	c, f := run(t, "", nil)
+	c, f := newClient(t, "", nil)
 	if err := c.Push(context.Background(), "origin", []string{"a", "b"}); err != nil {
 		t.Fatal(err)
 	}
@@ -80,7 +80,7 @@ func TestPush(t *testing.T) {
 }
 
 func TestPushNoBranches(t *testing.T) {
-	c, f := run(t, "", nil)
+	c, f := newClient(t, "", nil)
 	if err := c.Push(context.Background(), "origin", nil); err != nil {
 		t.Fatal(err)
 	}
@@ -90,7 +90,7 @@ func TestPushNoBranches(t *testing.T) {
 }
 
 func TestFetchRebase(t *testing.T) {
-	c, f := run(t, "", nil)
+	c, f := newClient(t, "", nil)
 	if err := c.Fetch(context.Background(), "origin"); err != nil {
 		t.Fatal(err)
 	}
@@ -103,19 +103,19 @@ func TestFetchRebase(t *testing.T) {
 }
 
 func TestMatch(t *testing.T) {
-	c, _ := run(t, "abc\n", nil)
+	c, _ := newClient(t, "abc\n", nil)
 	ok, err := c.Match(context.Background(), "r")
 	if err != nil || !ok {
 		t.Fatalf("got %v %v", ok, err)
 	}
-	c2, _ := run(t, "\n", nil)
+	c2, _ := newClient(t, "\n", nil)
 	if ok, _ := c2.Match(context.Background(), "r"); ok {
 		t.Fatal("want false")
 	}
 }
 
 func TestConflicts(t *testing.T) {
-	c, _ := run(t, "aaa\nbbb\n", nil)
+	c, _ := newClient(t, "aaa\nbbb\n", nil)
 	got, err := c.Conflicts(context.Background(), "trunk()..H")
 	if err != nil || len(got) != 2 {
 		t.Fatalf("got %v %v", got, err)
