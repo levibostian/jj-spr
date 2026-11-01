@@ -1,0 +1,23 @@
+version: 2
+
+project_name: jj-spr
+
+builds:
+  - env: [CGO_ENABLED=0]
+    flags: [-trimpath]
+    ldflags: [-s -w]
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+
+archives:
+  - format_overrides:
+      - goos: windows
+        formats: [zip]
+
+# --snapshot skips git tag/dirty validation; this makes it use the real release
+# version so archive names match what packslip records.
+snapshot:
+  version_template: "{{ .Env.VERSION }}"
+
+release:
+  disable: true

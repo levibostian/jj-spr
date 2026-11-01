@@ -1,0 +1,31 @@
+[tools]
+go = "1.26.1"
+goreleaser = "2.19.0"
+packslip = "1.11.3"
+
+[tasks.test]
+description = "Run all Go tests"
+run = "go test ./..."
+
+[tasks.build-all]
+description = "Build tar.gz/zip release archives for linux, darwin and windows (amd64 + arm64) into dist/, named for VERSION (default 0.0.0)"
+run = '''
+set -eu
+VERSION="${VERSION:-0.0.0}" goreleaser release --snapshot --clean
+'''
+
+[tasks.packslip]
+description = "Sign the archives in dist/ with packslip into dist/packslip.sigstore.json (no upload), keyless with the CI identity"
+run = '''
+set -eu
+: "${VERSION:?set VERSION, for example: VERSION=1.2.3 mise run packslip}"
+
+project="github.com/levibostian/jj-spr"
+packslip create \
+  --project "$project" \
+  --version "$VERSION" \
+  --bin jj-spr \
+  --url-base "https://${project}/releases/download/${VERSION}" \
+  --out dist \
+  dist/jj-spr_*.tar.gz dist/jj-spr_*.zip
+'''
