@@ -129,6 +129,61 @@ func TestResolveMultipleBookmarks(t *testing.T) {
 	}
 }
 
+// twoStackHandler serves two stack bookmarks, ws (change A) and other (change
+// B). checkedChange is the change ID that should look checked out (@
+// reachable); checkedChange "" makes both look checked out. workspace is the
+// name to report for the current workspace (empty means report none).
+func twoStackHandler(checkedChange, workspace string) func(runner.Command) (string, error) {
+	return func(c runner.Command) (string, error) {
+		s := c.String()
+		switch {
+		case commandContains(c, "log", "remote_bookmarks"):
+			return "main\n", nil
+		case commandContains(c, "bookmark", "list"):
+			return "ws\tA\nother\tB\n", nil
+		case commandContains(c, "workspace", "list"):
+			return workspace + "\tZ\n", nil
+		case commandContains(c, "log") && strings.Contains(s, "-r @ "):
+			return "Z\n", nil
+		case commandContains(c, "log") && strings.Contains(s, checkedChange+" & ::@"):
+			return "A\n", nil
+		case commandContains(c, "log") && strings.Contains(s, " & ::@"):
+			return "", nil
+		case commandContains(c, "log") && strings.Contains(s, "~::trunk()"):
+			return "A\n", nil
+		case commandContains(c, "log"):
+			return commitLine("A", "x\n", false), nil
+		case commandContains(c, "repo view", "owner"):
+			return "me\n", nil
+		case commandContains(c, "pulls"):
+			return "[]", nil
+		}
+		return "", fmt.Errorf("unexpected: %s", s)
+	}
+}
+
+func TestResolvePicksCheckedOutStack(t *testing.T) {
+	jjc, ghc, _ := clients(twoStackHandler("A", ""))
+	st, err := Resolve(context.Background(), jjc, ghc, Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.Bookmark != "ws" {
+		t.Fatalf("got %q", st.Bookmark)
+	}
+}
+
+func TestResolvePicksWorkspaceStack(t *testing.T) {
+	jjc, ghc, _ := clients(twoStackHandler("", "other"))
+	st, err := Resolve(context.Background(), jjc, ghc, Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.Bookmark != "other" {
+		t.Fatalf("got %q", st.Bookmark)
+	}
+}
+
 func TestActiveRetiresMerged(t *testing.T) {
 	merged := "2024-01-01"
 	e := Entry{Commit: jj.Commit{ChangeID: "x"}, PR: &gh.PR{Number: 1, State: "closed", MergedAt: &merged}}

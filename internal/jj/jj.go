@@ -133,6 +133,33 @@ func (c *Client) Bookmarks(ctx context.Context) ([]Bookmark, error) {
 	return bookmarks, nil
 }
 
+// Workspace returns the name of the current jj workspace. The workspace whose
+// target commit is @ is the current one.
+func (c *Client) Workspace(ctx context.Context) (string, error) {
+	atChangeID, err := c.R.Run(ctx, runner.Command{
+		Name: "jj",
+		Args: []string{"log", "-r", "@", "--no-graph", "-T", "change_id"},
+	})
+	if err != nil {
+		return "", err
+	}
+	out, err := c.R.Run(ctx, runner.Command{
+		Name: "jj",
+		Args: []string{"workspace", "list", "-T", `name ++ "\t" ++ target.change_id() ++ "\n"`},
+	})
+	if err != nil {
+		return "", err
+	}
+	atChangeID = strings.TrimSpace(atChangeID)
+	for _, line := range strings.Split(strings.TrimRight(out, "\n"), "\n") {
+		name, id, _ := strings.Cut(line, "\t")
+		if id == atChangeID {
+			return name, nil
+		}
+	}
+	return "", nil
+}
+
 // SetBookmark points a local bookmark at a change, creating it if needed.
 func (c *Client) SetBookmark(ctx context.Context, name, changeID string) error {
 	_, err := c.R.Run(ctx, runner.Command{

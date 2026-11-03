@@ -135,6 +135,15 @@ func chooseBookmark(ctx context.Context, jjc *jj.Client, bookmarks []jj.Bookmark
 			candidates = append(candidates, b)
 		}
 	}
+	if len(candidates) > 1 {
+		b, ok, err := pickWorkspaceStack(ctx, jjc, candidates)
+		if err != nil {
+			return jj.Bookmark{}, err
+		}
+		if ok {
+			return b, nil
+		}
+	}
 	switch len(candidates) {
 	case 0:
 		return jj.Bookmark{}, fmt.Errorf("no stack bookmark found; create one on your top commit or pass --stack")
@@ -147,4 +156,34 @@ func chooseBookmark(ctx context.Context, jjc *jj.Client, bookmarks []jj.Bookmark
 		}
 		return jj.Bookmark{}, fmt.Errorf("multiple stack bookmarks found (%s); pick one with --stack", strings.Join(names, ", "))
 	}
+}
+
+// pickWorkspaceStack narrows stacks that belong to different jj workspaces. It
+// prefers the stack checked out in this workspace (its bookmark is at or below
+// @), then the stack named after the workspace. Bookmark discovery is
+// repo-wide, so without this every workspace's stack looks like a candidate.
+// The workspace lookup is best-effort; an error falls back to the caller's
+// "pick one" message.
+func pickWorkspaceStack(ctx context.Context, jjc *jj.Client, candidates []jj.Bookmark) (jj.Bookmark, bool, error) {
+	var checkedOut []jj.Bookmark
+	for _, b := range candidates {
+		ok, err := jjc.Match(ctx, b.ChangeID+" & ::@")
+		if err != nil {
+			return jj.Bookmark{}, false, err
+		}
+		if ok {
+			checkedOut = append(checkedOut, b)
+		}
+	}
+	if len(checkedOut) == 1 {
+		return checkedOut[0], true, nil
+	}
+	if workspace, err := jjc.Workspace(ctx); err == nil && workspace != "" {
+		for _, b := range candidates {
+			if b.Name == workspace {
+				return b, true, nil
+			}
+		}
+	}
+	return jj.Bookmark{}, false, nil
 }
