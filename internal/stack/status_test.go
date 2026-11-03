@@ -51,6 +51,21 @@ func TestBitsForNil(t *testing.T) {
 	}
 }
 
+func TestShortID(t *testing.T) {
+	c := jj.Commit{ChangeID: "zwwzlzkyuvsr", IDPrefix: "z", ShortID: "zwwzlzky"}
+	if got := shortID(c, false); got != "zwwzlzky" {
+		t.Fatalf("plain %q", got)
+	}
+	want := "\x1b[1m\x1b[38;5;5mz\x1b[0m\x1b[38;5;8mwwzlzky\x1b[39m"
+	if got := shortID(c, true); got != want {
+		t.Fatalf("color %q want %q", got, want)
+	}
+	// No ShortID falls back to the full change ID.
+	if got := shortID(jj.Commit{ChangeID: "abc"}, true); got != "abc" {
+		t.Fatalf("fallback %q", got)
+	}
+}
+
 func TestBuildReport(t *testing.T) {
 	view := `{"number":41,"title":"Add model","state":"OPEN","mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","reviewDecision":"APPROVED","statusCheckRollup":[{"state":"SUCCESS"}],"url":"u","baseRefName":"main"}`
 	_, ghc, _ := clients(func(c runner.Command) (string, error) {
@@ -61,8 +76,8 @@ func TestBuildReport(t *testing.T) {
 	})
 	merged := "2024-01-01"
 	st := &Stack{Bookmark: "mystack", BaseBranch: "main", Entries: []Entry{
-		{Commit: jj.Commit{ChangeID: "C1"}, Branch: "mystack-C1", PR: &gh.PR{Number: 40, State: "closed", MergedAt: &merged}},
-		{Commit: jj.Commit{ChangeID: "C2"}, Branch: "mystack-C2", PR: &gh.PR{Number: 41, State: "open"}},
+		{Commit: jj.Commit{ChangeID: "C1", Description: "Add model\n", ShortID: "C1x", IDPrefix: "C"}, Branch: "mystack-C1", PR: &gh.PR{Number: 40, State: "closed", MergedAt: &merged}},
+		{Commit: jj.Commit{ChangeID: "C2", Description: "Add API\n\nbody\n", ShortID: "C2x", IDPrefix: "C"}, Branch: "mystack-C2", PR: &gh.PR{Number: 41, State: "open"}},
 	}}
 	r, err := BuildReport(context.Background(), ghc, st)
 	if err != nil {
@@ -73,8 +88,15 @@ func TestBuildReport(t *testing.T) {
 	}
 	var buf bytes.Buffer
 	Render(&buf, r)
-	if !strings.Contains(buf.String(), "#41") || !strings.Contains(buf.String(), "mystack") {
-		t.Fatalf("render: %s", buf.String())
+	out := buf.String()
+	if !strings.Contains(out, "#41") || !strings.Contains(out, "mystack") {
+		t.Fatalf("render: %s", out)
+	}
+	if !strings.Contains(out, "C2x Add API") {
+		t.Fatalf("want short id + title: %s", out)
+	}
+	if strings.Contains(out, "mystack-C1") {
+		t.Fatalf("branch should not render: %s", out)
 	}
 	b, err := r.JSON()
 	if err != nil || !strings.Contains(string(b), "mystack") {

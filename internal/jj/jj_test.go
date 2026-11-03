@@ -28,8 +28,9 @@ func TestCommitTitleBody(t *testing.T) {
 }
 
 func TestLogParsesCommits(t *testing.T) {
-	out := `{"commit_id":"a","change_id":"x","description":"one\n"}` + "\x1f" + "0\n" +
-		`{"commit_id":"b","change_id":"y","description":"two\n\nbody\n"}` + "\x1f" + "1\n"
+	sep := "\x1f"
+	out := strings.Join([]string{`{"commit_id":"a","change_id":"x","description":"one\n"}`, "0", "x", "xywxyzab"}, sep) + "\n" +
+		strings.Join([]string{`{"commit_id":"b","change_id":"y","description":"two\n\nbody\n"}`, "1", "y", "ywwzlzky"}, sep) + "\n"
 	c, _ := newClient(t, out, nil)
 	got, err := c.Log(context.Background(), "trunk()..H")
 	if err != nil {
@@ -38,10 +39,13 @@ func TestLogParsesCommits(t *testing.T) {
 	if len(got) != 2 || got[0].ChangeID != "x" || got[1].Empty != true {
 		t.Fatalf("got %+v", got)
 	}
+	if got[1].IDPrefix != "y" || got[1].ShortID != "ywwzlzky" {
+		t.Fatalf("short id wrong: %+v", got[1])
+	}
 }
 
 func TestLogRejectsMalformed(t *testing.T) {
-	c, _ := newClient(t, "not json\x1f0\n", nil)
+	c, _ := newClient(t, "not json\x1f0\x1fx\x1fxyw\n", nil)
 	if _, err := c.Log(context.Background(), "r"); err == nil {
 		t.Fatal("want error")
 	}

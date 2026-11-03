@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 
 	"github.com/levibostian/jj-spr/internal/gh"
+	"github.com/levibostian/jj-spr/internal/jj"
 )
 
 // Bits are the four at-a-glance status signals for one PR.
@@ -131,17 +133,51 @@ func mergeBit(p *gh.PR) string {
 
 // Render writes a human-readable status table.
 func Render(w io.Writer, r *Report) {
+	color := colorEnabled(w)
 	fmt.Fprintf(w, "%s  (base: %s)\n", r.Stack.Bookmark, r.Stack.BaseBranch)
 	for _, row := range r.Rows {
-		label, title := "no PR", ""
+		label := "no PR"
 		if row.Detail != nil {
-			label, title = fmt.Sprintf("#%d", row.Detail.Number), row.Detail.Title
+			label = fmt.Sprintf("#%d", row.Detail.Number)
 		} else if row.Entry.Commit.Empty {
 			label = "(empty)"
 		}
-		fmt.Fprintf(w, "  %s %s %-10s %s\n",
-			row.Bits.String(), label, title, row.Entry.Branch)
+		fmt.Fprintf(w, "  %s %-7s %s %s\n",
+			row.Bits.String(), label, shortID(row.Entry.Commit, color), row.Entry.Commit.Title())
 	}
+}
+
+// shortID renders the abbreviated change ID, highlighting the shortest
+// unambiguous prefix with jj's own change-ID colors: bright for the prefix,
+// dim for the rest.
+func shortID(c jj.Commit, color bool) string {
+	if c.ShortID == "" {
+		return c.ChangeID
+	}
+	prefixLen := len(c.IDPrefix)
+	if !color || prefixLen == 0 {
+		return c.ShortID
+	}
+	if prefixLen > len(c.ShortID) {
+		prefixLen = len(c.ShortID)
+	}
+	return "\x1b[1m\x1b[38;5;5m" + c.ShortID[:prefixLen] + "\x1b[0m" +
+		"\x1b[38;5;8m" + c.ShortID[prefixLen:] + "\x1b[39m"
+}
+
+// colorEnabled reports whether ANSI color should be written to w. Color is off
+// when the caller opts out (NO_COLOR, dumb terminal) or w is not a terminal, so
+// piped and redirected output stays plain text.
+func colorEnabled(w io.Writer) bool {
+	if os.Getenv("NO_COLOR") != "" || os.Getenv("TERM") == "dumb" {
+		return false
+	}
+	f, ok := w.(*os.File)
+	if !ok {
+		return false
+	}
+	fi, err := f.Stat()
+	return err == nil && fi.Mode()&os.ModeCharDevice != 0
 }
 
 // String renders the four bits as emoji.

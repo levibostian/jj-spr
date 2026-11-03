@@ -67,10 +67,14 @@ Example `status`:
 
 ```
 mystack  (base: main)
-  ✅✅✅✅ #41 Add model   mystack-qpvuntsm
-  ✅⏳✅✅ #42 Add API     mystack-rlvkypqw
-  ➖➖📝❌ #43 Add UI      mystack-zmylxtxx
+  ✅✅✅✅ #41     qpvuntsm Add model
+  ✅⏳✅✅ #42     rlvkypqw Add API
+  ➖➖📝❌ #43     zmylxtxx Add UI
 ```
+
+The first column after the PR number is the change ID, abbreviated to the
+shortest unambiguous prefix (shown in color on a terminal) followed by the
+first line of the commit description.
 
 ## Flags
 

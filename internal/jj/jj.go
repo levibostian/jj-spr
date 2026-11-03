@@ -20,6 +20,11 @@ type Commit struct {
 	ChangeID    string
 	Description string
 	Empty       bool
+	// IDPrefix is the shortest change ID prefix that is unambiguous, as jj
+	// accepts on the command line (change_id.shortest()).
+	IDPrefix string
+	// ShortID is the abbreviated change ID to display (change_id.shortest(8)).
+	ShortID string
 }
 
 // Title is the first line of the commit description.
@@ -52,7 +57,7 @@ type wireCommit struct {
 func (c *Client) Log(ctx context.Context, revset string) ([]Commit, error) {
 	out, err := c.R.Run(ctx, runner.Command{
 		Name: "jj",
-		Args: []string{"log", "--no-graph", "--reversed", "-r", revset, "-T", `json(self) ++ "\x1f" ++ if(empty, "1", "0") ++ "\n"`},
+		Args: []string{"log", "--no-graph", "--reversed", "-r", revset, "-T", `json(self) ++ "\x1f" ++ if(empty, "1", "0") ++ "\x1f" ++ change_id.shortest() ++ "\x1f" ++ change_id.shortest(8) ++ "\n"`},
 	})
 	if err != nil {
 		return nil, err
@@ -62,18 +67,20 @@ func (c *Client) Log(ctx context.Context, revset string) ([]Commit, error) {
 		if line == "" {
 			continue
 		}
-		jsonPart, flags, found := strings.Cut(line, "\x1f")
-		if !found {
+		parts := strings.Split(line, "\x1f")
+		if len(parts) != 4 {
 			return nil, fmt.Errorf("unexpected jj log line: %q", line)
 		}
 		var w wireCommit
-		if err := json.Unmarshal([]byte(jsonPart), &w); err != nil {
+		if err := json.Unmarshal([]byte(parts[0]), &w); err != nil {
 			return nil, fmt.Errorf("parsing jj log line: %w", err)
 		}
 		commits = append(commits, Commit{
 			ChangeID:    w.ChangeID,
 			Description: w.Description,
-			Empty:       flags == "1",
+			Empty:       parts[1] == "1",
+			IDPrefix:    parts[2],
+			ShortID:     parts[3],
 		})
 	}
 	return commits, nil
