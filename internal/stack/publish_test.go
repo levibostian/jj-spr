@@ -146,7 +146,7 @@ func TestPublishUpdatesExistingPRs(t *testing.T) {
 	logOut := commitLine("C1", "New title\n", false) + commitLine("C2", "Second\n", false)
 	handler := func(c runner.Command) (string, error) {
 		switch {
-		case commandContains(c, "repo view", "defaultBranchRef"):
+		case commandContains(c, "log", "remote_bookmarks"):
 			return "main\n", nil
 		case commandContains(c, "repo view", "owner"):
 			return "me\n", nil
@@ -191,7 +191,7 @@ func TestPublishRetargetsBaseBeforePushOnReorder(t *testing.T) {
 	unstacked, linked := false, false
 	handler := func(c runner.Command) (string, error) {
 		switch {
-		case commandContains(c, "repo view", "defaultBranchRef"):
+		case commandContains(c, "log", "remote_bookmarks"):
 			return "main\n", nil
 		case commandContains(c, "repo view", "owner"):
 			return "me\n", nil
@@ -250,7 +250,7 @@ func TestPublishRetargetsBaseOnMidStackRemoval(t *testing.T) {
 	unstacked := false
 	handler := func(c runner.Command) (string, error) {
 		switch {
-		case commandContains(c, "repo view", "defaultBranchRef"):
+		case commandContains(c, "log", "remote_bookmarks"):
 			return "main\n", nil
 		case commandContains(c, "repo view", "owner"):
 			return "me\n", nil
@@ -296,7 +296,7 @@ func TestPublishAppendDoesNotResetOrRetarget(t *testing.T) {
 	linked := false
 	handler := func(c runner.Command) (string, error) {
 		switch {
-		case commandContains(c, "repo view", "defaultBranchRef"):
+		case commandContains(c, "log", "remote_bookmarks"):
 			return "main\n", nil
 		case commandContains(c, "repo view", "owner"):
 			return "me\n", nil
@@ -364,7 +364,7 @@ func TestPublishCreatesPRsAndStack(t *testing.T) {
 	linked := false
 	handler := func(c runner.Command) (string, error) {
 		switch {
-		case commandContains(c, "repo view", "defaultBranchRef"):
+		case commandContains(c, "log", "remote_bookmarks"):
 			return "main\n", nil
 		case commandContains(c, "repo view", "owner"):
 			return "me\n", nil

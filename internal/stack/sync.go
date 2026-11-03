@@ -29,11 +29,11 @@ func Sync(ctx context.Context, jjc *jj.Client, ghc *gh.Client, opts Options) (*R
 		return nil, err
 	}
 	if active := st.Active(); len(active) > 0 {
-		if err := jjc.Rebase(ctx, active[0].Commit.ChangeID, "trunk()"); err != nil {
+		if err := jjc.Rebase(ctx, active[0].Commit.ChangeID, baseRev(opts)); err != nil {
 			return nil, err
 		}
 	}
-	conflicts, err := jjc.Conflicts(ctx, "trunk().."+st.HeadChangeID)
+	conflicts, err := jjc.Conflicts(ctx, baseRev(opts)+".."+st.HeadChangeID)
 	if err != nil {
 		return nil, err
 	}

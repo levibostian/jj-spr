@@ -24,12 +24,9 @@ func TestAvailable(t *testing.T) {
 	}
 }
 
-func TestOwnerAndDefaultBranch(t *testing.T) {
+func TestOwner(t *testing.T) {
 	c, f := newClient(func(runner.Command) (string, error) { return "levibostian\n", nil })
 	if got, _ := c.Owner(context.Background()); got != "levibostian" {
-		t.Fatalf("got %q", got)
-	}
-	if got, _ := c.DefaultBranch(context.Background()); got != "levibostian" {
 		t.Fatalf("got %q", got)
 	}
 	if !strings.Contains(f.Calls[0].String(), "repo view") {

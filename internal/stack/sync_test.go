@@ -15,7 +15,7 @@ func TestSync(t *testing.T) {
 	linked, creates := false, 0
 	handler := func(c runner.Command) (string, error) {
 		switch {
-		case commandContains(c, "repo view", "defaultBranchRef"):
+		case commandContains(c, "log", "remote_bookmarks"):
 			return "main\n", nil
 		case commandContains(c, "repo view", "owner"):
 			return "me\n", nil
@@ -61,11 +61,11 @@ func TestStatusHelper(t *testing.T) {
 	logOut := commitLine("C1", "Add model\n", false)
 	handler := func(c runner.Command) (string, error) {
 		switch {
-		case commandContains(c, "repo view", "defaultBranchRef"):
+		case commandContains(c, "log", "remote_bookmarks"):
 			return "main\n", nil
 		case commandContains(c, "bookmark", "list"):
 			return bookmarks, nil
-		case commandContains(c, "log") && strings.Contains(c.String(), "~::trunk()"):
+		case commandContains(c, "log") && strings.Contains(c.String(), "~::main"):
 			return "C2\n", nil
 		case commandContains(c, "log"):
 			return logOut, nil
@@ -91,7 +91,7 @@ func TestSyncStopsOnConflicts(t *testing.T) {
 	logOut := commitLine("C1", "Add model\n", false)
 	handler := func(c runner.Command) (string, error) {
 		switch {
-		case commandContains(c, "repo view", "defaultBranchRef"):
+		case commandContains(c, "log", "remote_bookmarks"):
 			return "main\n", nil
 		case commandContains(c, "repo view", "owner"):
 			return "me\n", nil
