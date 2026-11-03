@@ -3,6 +3,24 @@ go = "1.27.3"
 goreleaser = "2.19.0"
 packslip = "1.11.3"
 
+[tasks.format]
+description = "Format the whole Go module"
+run = "go fmt ./..."
+
+[tasks.format-files]
+description = "Format only the given .go files"
+sources = ["**/*.go"]
+run = "gofmt -w"
+
+[tasks.lint]
+description = "Vet the whole Go module"
+run = "go vet ./..."
+
+[tasks.lint-files]
+description = "Vet only the packages of the given .go files"
+sources = ["**/*.go"]
+run = "sh -c 'go vet $(dirname \"$@\" | sed \"s|^|./|\" | sort -u)' --"
+
 [tasks.test]
 description = "Run all Go tests"
 run = "go test ./..."
