@@ -25,6 +25,10 @@ run = "sh -c 'go vet $(dirname \"$@\" | sed \"s|^|./|\" | sort -u)' --"
 description = "Run all Go tests"
 run = "go test ./..."
 
+[tasks.build]
+description = "Build jj-spr for the host architecture into ./jj-spr"
+run = "go build -o jj-spr ."
+
 [tasks.build-all]
 description = "Build tar.gz/zip release archives for linux, darwin and windows (amd64 + arm64) into dist/, named for VERSION (default 0.0.0)"
 run = '''
