@@ -11,7 +11,8 @@ import (
 )
 
 func jjLine(changeID, desc string) string {
-	return fmt.Sprintf(`{"commit_id":"sha-%s","change_id":%q,"description":%q}`, changeID, changeID, desc) + "\x1f0\n"
+	return fmt.Sprintf(`{"commit_id":"sha-%s","change_id":%q,"description":%q}`, changeID, changeID, desc) +
+		"\x1f" + strings.Join([]string{"0", changeID, changeID}, "\x1f") + "\n"
 }
 
 // fullHandler scripts a two-commit stack with no existing PRs.

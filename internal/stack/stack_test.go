@@ -31,7 +31,8 @@ func commitLine(changeID, description string, empty bool) string {
 	if empty {
 		flag = "1"
 	}
-	return fmt.Sprintf(`{"commit_id":"sha-%s","change_id":%q,"description":%q}`, changeID, changeID, description) + "\x1f" + flag + "\n"
+	return fmt.Sprintf(`{"commit_id":"sha-%s","change_id":%q,"description":%q}`, changeID, changeID, description) +
+		"\x1f" + strings.Join([]string{flag, changeID, changeID}, "\x1f") + "\n"
 }
 
 func resolveHandler(bookmarks, logOut string, prs map[string]string) func(runner.Command) (string, error) {
