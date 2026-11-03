@@ -62,6 +62,22 @@ func TestBookmarksParse(t *testing.T) {
 	}
 }
 
+func TestWorkspace(t *testing.T) {
+	f := &runner.Fake{Handler: func(c runner.Command) (string, error) {
+		if strings.Contains(c.String(), "workspace list") {
+			return "default\tA\nother\tB\n", nil
+		}
+		return "B\n", nil
+	}}
+	got, err := (&Client{R: f}).Workspace(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "other" {
+		t.Fatalf("got %q", got)
+	}
+}
+
 func TestSetBookmarkArgs(t *testing.T) {
 	c, f := newClient(t, "", nil)
 	if err := c.SetBookmark(context.Background(), "mystack/x", "x"); err != nil {
