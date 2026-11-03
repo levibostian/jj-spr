@@ -22,13 +22,13 @@ func fullHandler(linked *bool, creates *int, existing bool) func(runner.Command)
 		switch {
 		case strings.Contains(s, "gh stack --help"):
 			return "", nil
-		case strings.Contains(s, "repo view --json defaultBranchRef"):
+		case strings.Contains(s, "remote_bookmarks"):
 			return "main\n", nil
 		case strings.Contains(s, "repo view --json owner"):
 			return "me\n", nil
 		case strings.Contains(s, "bookmark list"):
 			return "mystack\tC2\nmystack-C1\tC1\nmystack-C2\tC2\n", nil
-		case strings.Contains(s, "~::trunk()"):
+		case strings.Contains(s, "~::"):
 			return "C2\n", nil
 		case strings.Contains(s, "conflicts()"):
 			return "", nil
@@ -174,7 +174,7 @@ func TestSyncWiring(t *testing.T) {
 	if code := app.Run(context.Background(), []string{"sync", "--base", "main"}); code != 0 {
 		t.Fatalf("code %d out=%s", code, out.String())
 	}
-	if !callsContain(f, "rebase -s C1 -o trunk()") {
+	if !callsContain(f, "rebase -s C1 -o main") {
 		t.Fatalf("calls %v", f.Calls)
 	}
 }

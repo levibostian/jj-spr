@@ -81,7 +81,7 @@ first line of the commit description.
 | Flag | Default | Meaning |
 |------|---------|---------|
 | `--stack <name>` | auto-detect | Bookmark that names the stack. |
-| `--base <branch>` | repo default branch | Base branch of the bottom PR. |
+| `--base <branch>` | `trunk()` | Base branch/bookmark of the bottom PR and of the jj commit range. |
 | `--remote <name>` | `origin` | Remote to fetch/push. |
 | `--draft` | off | Create new PRs as drafts. |
 | `--json` | off | `status`: machine-readable output. |

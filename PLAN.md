@@ -64,7 +64,7 @@ Binary name: `jj-spr`. Suggested module path: `github.com/levibostian/jj-spr`.
 
 | Concept | Representation |
 |---|---|
-| Trunk / base branch | jj revset `trunk()`, assumed to be the GitHub default branch. Resolve the branch name with `gh repo view --json defaultBranchRef`, or `--base`. |
+| Trunk / base branch | jj revset `trunk()`. The default base branch is the remote bookmark `trunk()` points at on `--remote`; resolve it with `jj log -r 'trunk()'`, or use `--base`. |
 | Stack label | The single non-tool local jj bookmark the user maintains. |
 | Stack commits | `trunk()..H`, oldest → newest, where `H` is the change ID the bookmark points to. |
 | Commit identity | Full jj **change ID** (stable across rewrites/reorders). |
@@ -75,9 +75,10 @@ Binary name: `jj-spr`. Suggested module path: `github.com/levibostian/jj-spr`.
 | PR body | Remainder of the jj commit description after the first line. |
 | GitHub stack | Created/updated exclusively by `gh stack link <pr...>` (bottom → top). Reconciled via the Stacks REST API when membership must change. |
 
-Assumption: `trunk()` and the GitHub default branch are the same branch. The
-tool never tries to reconcile a mismatch; `--base` overrides the branch name
-if needed.
+The default base is `trunk()`. Its branch name (the remote bookmark it points
+at on `--remote`, default `origin`) is the bottom PR's base. `--base` names a
+branch or bookmark and is used both as the PR base and as the revset the
+commit range is measured from.
 
 ### Why change-ID branch names
 
@@ -155,7 +156,7 @@ Persistent flags:
 | Flag | Default | Meaning |
 |---|---|---|
 | `--stack <name>` | auto-detect | User bookmark naming the stack. |
-| `--base <branch>` | repo default branch | Base branch of the bottom PR. |
+| `--base <branch>` | `trunk()` | Base branch/bookmark of the bottom PR and of the jj commit range. |
 | `--remote <name>` | `origin` | Remote for `jj git fetch` / `jj git push`. |
 | `--draft` | off | Create new PRs as drafts (existing draft state is not touched). |
 | `--json` | off | `status` only: machine-readable output. |
@@ -403,7 +404,7 @@ Display-only; never mutates.
 | Push branches | `jj git push --remote <remote> --allow-empty-description -b '<b1>' -b '<b2>'` |
 | Fetch | `jj git fetch --remote <remote>` |
 | Rebase stack onto trunk | `jj rebase -s '<first-active-change-id>' -o 'trunk()'` |
-| Default branch | `gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name'` |
+| Base branch | `jj log -r 'trunk()' --no-graph -T 'remote_bookmarks.filter(|b| b.remote() == "<remote>").map(|b| b.name()).join("\n")'` |
 | Repo owner | `gh repo view --json owner --jq '.owner.login'` |
 | Find PR by head | `gh api -X GET repos/{owner}/{repo}/pulls -f head='<owner>:<branch>' -f state=all --jq '.[0] // empty'` |
 | Create PR | `gh pr create --head <branch> --base <base> --title <t> --body-file - [--draft]` |
@@ -416,7 +417,7 @@ Display-only; never mutates.
 ## 9. Error handling & edge cases
 
 - **Not a jj repo / no `trunk()`**: fail early with an actionable message
-  (requires an `origin` remote and a fetched default branch).
+  (requires a `trunk()` that points at a remote bookmark on `--remote`).
 - **Bookmark ambiguity**: list candidates, require `--stack`.
 - **No active commits**: exit 0 with "nothing to publish"; drop any existing
   stack membership.

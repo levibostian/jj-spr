@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/levibostian/jj-spr/internal/runner"
@@ -84,6 +85,29 @@ func (c *Client) Log(ctx context.Context, revset string) ([]Commit, error) {
 		})
 	}
 	return commits, nil
+}
+
+// TrunkBranch returns the branch name that the trunk() revset points at on
+// remote. jj models git branches as bookmarks, so this is the remote
+// bookmark's name. The first match wins; trunk() normally has exactly one.
+func (c *Client) TrunkBranch(ctx context.Context, remote string) (string, error) {
+	out, err := c.R.Run(ctx, runner.Command{
+		Name: "jj",
+		// Quoted so a remote name cannot inject template syntax.
+		Args: []string{"log", "-r", "trunk()", "--no-graph", "-T",
+			`remote_bookmarks.filter(|b| b.remote() == ` + strconv.Quote(remote) + `).map(|b| b.name()).join("\n") ++ "\n"`},
+	})
+	if err != nil {
+		return "", err
+	}
+	name := strings.TrimSpace(out)
+	if name == "" {
+		return "", fmt.Errorf("no remote bookmark at trunk() on remote %q", remote)
+	}
+	if i := strings.IndexByte(name, '\n'); i >= 0 {
+		name = name[:i]
+	}
+	return name, nil
 }
 
 // Bookmarks returns all local bookmarks.

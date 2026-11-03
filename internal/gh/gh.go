@@ -53,11 +53,6 @@ func (c *Client) Owner(ctx context.Context) (string, error) {
 	return c.jq(ctx, "repo", "view", "--json", "owner", "--jq", ".owner.login")
 }
 
-// DefaultBranch returns the repository default branch name.
-func (c *Client) DefaultBranch(ctx context.Context) (string, error) {
-	return c.jq(ctx, "repo", "view", "--json", "defaultBranchRef", "--jq", ".defaultBranchRef.name")
-}
-
 func (c *Client) jq(ctx context.Context, args ...string) (string, error) {
 	out, err := c.R.Run(ctx, runner.Command{Name: "gh", Args: args})
 	if err != nil {

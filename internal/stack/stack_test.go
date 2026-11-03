@@ -38,7 +38,7 @@ func commitLine(changeID, description string, empty bool) string {
 func resolveHandler(bookmarks, logOut string, prs map[string]string) func(runner.Command) (string, error) {
 	return func(c runner.Command) (string, error) {
 		switch {
-		case commandContains(c, "repo view", "defaultBranchRef"):
+		case commandContains(c, "log", "remote_bookmarks"):
 			return "main\n", nil
 		case commandContains(c, "repo view", "owner"):
 			return "me\n", nil
@@ -97,7 +97,7 @@ func TestResolveExplicitStack(t *testing.T) {
 func TestResolveNoBookmark(t *testing.T) {
 	jjc, ghc, _ := clients(func(c runner.Command) (string, error) {
 		switch {
-		case commandContains(c, "repo view", "defaultBranchRef"):
+		case commandContains(c, "log", "remote_bookmarks"):
 			return "main\n", nil
 		case commandContains(c, "bookmark", "list"):
 			return "main\tC0\n", nil
@@ -115,7 +115,7 @@ func TestResolveMultipleBookmarks(t *testing.T) {
 	bookmarks := "a\tA\nb\tB\n"
 	jjc, ghc, _ := clients(func(c runner.Command) (string, error) {
 		switch {
-		case commandContains(c, "repo view", "defaultBranchRef"):
+		case commandContains(c, "log", "remote_bookmarks"):
 			return "main\n", nil
 		case commandContains(c, "bookmark", "list"):
 			return bookmarks, nil

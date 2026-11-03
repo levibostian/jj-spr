@@ -75,7 +75,7 @@ func (a *App) parse(name string, args []string) (flags, error) {
 	fs := flag.NewFlagSet(name, flag.ContinueOnError)
 	fs.SetOutput(a.Stderr)
 	fs.StringVar(&f.opts.Stack, "stack", "", "stack bookmark (default: auto-detect)")
-	fs.StringVar(&f.opts.Base, "base", "", "base branch (default: repo default branch)")
+	fs.StringVar(&f.opts.Base, "base", "", "base branch or bookmark (default: jj trunk())")
 	fs.StringVar(&f.opts.Remote, "remote", "origin", "remote name")
 	fs.BoolVar(&f.opts.Draft, "draft", false, "create new PRs as drafts")
 	fs.BoolVar(&f.json, "json", false, "status: output JSON")
