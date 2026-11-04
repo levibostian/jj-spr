@@ -10,7 +10,8 @@ The tool is a thin orchestrator over the `jj` and `gh` CLIs.
 - `internal/jj`: typed wrappers for the jj commands used (log, bookmark, push,
   fetch, rebase, conflicts).
 - `internal/gh`: typed wrappers for gh commands (PR lookup/create/edit, stack
-  create/link/unstack).
+  create/link/unstack). Resolves `owner/repo` from the remote and pins it on
+  every call as `GH_REPO`.
 - `internal/stack`: domain logic. `Resolve` builds a `Stack` from a bookmark,
   `publish` pushes and reconciles PRs, `Sync` fetches/rebases, `BuildReport`
   renders status.
@@ -43,6 +44,11 @@ mock the real binaries.
   refuses stacks that list merged PRs. `stack.Reconcile` reads the current
   stack and, when the desired order is not a pure append, unstacks (via the
   Stacks REST API) and re-links.
+- **No `.git` checkout required.** The tool must run from a jj workspace that
+  is not colocated, so nothing reads `.git`. It reads `owner/repo` from the jj
+  remote once (`jj git remote list`) and passes `GH_REPO=owner/repo` to every
+  gh call (`runner.Command.Env`); gh otherwise discovers the repository by
+  shelling out to git. Never add a gh command that relies on the checkout.
 - **No local state file.** PRs are found by head branch via the pulls REST API.
 
 ## Testing

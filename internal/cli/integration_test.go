@@ -49,12 +49,12 @@ case "$args" in
   *"--reversed"*) cat %q ;;
   *"::@ | @::"*) printf 'qyqkxmwnppmyoqvsvrkzusvwxuxxxpyz\x1fsibstack\norqrlonrvsrqqvxyzlkxlyyvzntyopww\x1ffixtest fixtest-orqrlonrvsrqqvxyzlkxlyyvzntyopww\n' ;;
   *"::@"*) printf 'ymosozmxswzlttprpomytvqovlvkklpl\x1ffixtest-ymosozmxswzlttprpomytvqovlvkklpl\n' ;;
+  *"remote list"*) echo 'origin git@github.com:levibostian/temp-test-jj-spr.git' ;;
 esac
 `, logFile)
 	ghScript := `
 args="$*"
 case "$args" in
-  *"repo view"*"owner"*) echo levibostian ;;
   *"pr view"*"fixtest-oqxqzqrylvypnqowktnxnqsuwnsqqsuk"*) echo '` + viewModel + `' ;;
   *"pr view"*"fixtest-ymosozmxswzlttprpomytvqovlvkklpl"*) echo '` + viewUI + `' ;;
   *"pr view"*"fixtest-lrzmrvsptrvmqotxorzxvkvprqmoqsup"*) echo '` + viewAPI + `' ;;
@@ -106,6 +106,7 @@ case "$args" in
   *"conflicts()"*) ;;
   *"~::"*) printf 'lyyuwuqxzwrwsswrpmtomvylxytmulor\x1fmystack\n' ;;
   *remote_bookmarks*) echo main ;;
+  *"remote list"*) echo 'origin git@github.com:levibostian/temp-test-jj-spr.git' ;;
   *"--reversed"*)
     printf '%s' '{"commit_id":"09039837","parents":["00000000"],"change_id":"kpzpsrpmkussxpuuwnktkkpoqwqsonqm","description":"feat: add model\n","author":{"name":"Levi","email":"l@e.com","timestamp":"2026-10-29T09:20:00-05:00"},"committer":{"name":"Levi","email":"l@e.com","timestamp":"2026-10-29T09:20:00-05:00"}}'; printf '\x1f0\x1fk\x1fkpzpsrpm\n'
     printf '%s' '{"commit_id":"9ed1c706","parents":["09039837"],"change_id":"smpownmxsvvpymztrypumtosvotxtnto","description":"feat: add api\n","author":{"name":"Levi","email":"l@e.com","timestamp":"2026-10-29T09:20:01-05:00"},"committer":{"name":"Levi","email":"l@e.com","timestamp":"2026-10-29T09:20:01-05:00"}}'; printf '\x1f0\x1fs\x1fsmpownmx\n'
@@ -117,7 +118,6 @@ const ghScript = `
 args="$*"
 case "$args" in
   *"stack --help"*) ;;
-  *"repo view"*"owner"*) echo levibostian ;;
   *"pr create"*) count=$(cat /tmp/jjspr-e2e-pr 2>/dev/null || echo 100); count=$((count+1)); echo "$count" > /tmp/jjspr-e2e-pr; echo "https://github.com/levibostian/temp-test-jj-spr/pull/$count" ;;
   *"pr view"*) echo '{"number":101,"title":"feat: add model","state":"OPEN","isDraft":false,"mergeable":"MERGEABLE","mergeStateStatus":"CLEAN","reviewDecision":"","statusCheckRollup":[],"url":"https://github.com/levibostian/temp-test-jj-spr/pull/101","baseRefName":"main"}' ;;
   *"stacks?pull_request"*) echo '[]' ;;

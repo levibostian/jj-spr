@@ -148,8 +148,6 @@ func TestPublishUpdatesExistingPRs(t *testing.T) {
 		switch {
 		case commandContains(c, "log", "remote_bookmarks"):
 			return "main\n", nil
-		case commandContains(c, "repo view", "owner"):
-			return "me\n", nil
 		case commandContains(c, "bookmark", "list"):
 			return bookmarks, nil
 		case commandContains(c, "log") && strings.Contains(c.String(), "~::trunk()"):
@@ -193,8 +191,6 @@ func TestPublishRetargetsBaseBeforePushOnReorder(t *testing.T) {
 		switch {
 		case commandContains(c, "log", "remote_bookmarks"):
 			return "main\n", nil
-		case commandContains(c, "repo view", "owner"):
-			return "me\n", nil
 		case commandContains(c, "bookmark", "list"):
 			return bookmarks, nil
 		case commandContains(c, "log") && strings.Contains(c.String(), "~::trunk()"):
@@ -252,8 +248,6 @@ func TestPublishRetargetsBaseOnMidStackRemoval(t *testing.T) {
 		switch {
 		case commandContains(c, "log", "remote_bookmarks"):
 			return "main\n", nil
-		case commandContains(c, "repo view", "owner"):
-			return "me\n", nil
 		case commandContains(c, "bookmark", "list"):
 			return bookmarks, nil
 		case commandContains(c, "log") && strings.Contains(c.String(), "~::trunk()"):
@@ -298,8 +292,6 @@ func TestPublishAppendDoesNotResetOrRetarget(t *testing.T) {
 		switch {
 		case commandContains(c, "log", "remote_bookmarks"):
 			return "main\n", nil
-		case commandContains(c, "repo view", "owner"):
-			return "me\n", nil
 		case commandContains(c, "bookmark", "list"):
 			return bookmarks, nil
 		case commandContains(c, "log") && strings.Contains(c.String(), "~::trunk()"):
@@ -366,8 +358,6 @@ func TestPublishCreatesPRsAndStack(t *testing.T) {
 		switch {
 		case commandContains(c, "log", "remote_bookmarks"):
 			return "main\n", nil
-		case commandContains(c, "repo view", "owner"):
-			return "me\n", nil
 		case commandContains(c, "bookmark", "list"):
 			return bookmarks, nil
 		case commandContains(c, "log") && strings.Contains(c.String(), "~::trunk()"):

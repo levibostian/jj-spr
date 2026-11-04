@@ -83,10 +83,6 @@ func Resolve(ctx context.Context, jjc *jj.Client, ghc *gh.Client, opts Options) 
 	if err != nil {
 		return nil, err
 	}
-	owner, err := ghc.Owner(ctx)
-	if err != nil {
-		return nil, err
-	}
 	s := &Stack{Bookmark: bookmark.Name, HeadChangeID: bookmark.ChangeID, BaseBranch: base}
 	for _, c := range commits {
 		// Dash, not slash: git forbids refs/heads/<bookmark> and
@@ -94,7 +90,7 @@ func Resolve(ctx context.Context, jjc *jj.Client, ghc *gh.Client, opts Options) 
 		branch := bookmark.Name + "-" + c.ChangeID
 		e := Entry{Commit: c, Branch: branch}
 		if !c.Empty {
-			if e.PR, err = ghc.FindPR(ctx, owner, branch); err != nil {
+			if e.PR, err = ghc.FindPR(ctx, ghc.Repo.Owner, branch); err != nil {
 				return nil, err
 			}
 		}

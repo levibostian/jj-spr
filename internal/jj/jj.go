@@ -288,6 +288,22 @@ func (c *Client) Fetch(ctx context.Context, remote string) error {
 	return err
 }
 
+// RemoteURL returns the URL of a named Git remote. Read through jj so it works
+// in a jj workspace that is not colocated (no .git to inspect).
+func (c *Client) RemoteURL(ctx context.Context, remote string) (string, error) {
+	out, err := c.R.Run(ctx, runner.Command{Name: "jj", Args: []string{"git", "remote", "list"}})
+	if err != nil {
+		return "", err
+	}
+	for _, line := range strings.Split(strings.TrimRight(out, "\n"), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) >= 2 && fields[0] == remote {
+			return fields[1], nil
+		}
+	}
+	return "", fmt.Errorf("no %q remote found", remote)
+}
+
 // Rebase reparents source (and its descendants) onto the given target.
 func (c *Client) Rebase(ctx context.Context, source, onto string) error {
 	_, err := c.R.Run(ctx, runner.Command{Name: "jj", Args: []string{"rebase", "-s", source, "-o", onto}})

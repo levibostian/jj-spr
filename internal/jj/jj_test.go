@@ -62,6 +62,23 @@ func TestBookmarksParse(t *testing.T) {
 	}
 }
 
+func TestRemoteURL(t *testing.T) {
+	c, f := newClient(t, "origin git@github.com:levibostian/jj-spr.git\nupstream https://github.com/jj-vcs/jj.git\n", nil)
+	got, err := c.RemoteURL(context.Background(), "upstream")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "https://github.com/jj-vcs/jj.git" {
+		t.Fatalf("got %q", got)
+	}
+	if !strings.Contains(f.Calls[0].String(), "git remote list") {
+		t.Fatalf("got %q", f.Calls[0].String())
+	}
+	if _, err := c.RemoteURL(context.Background(), "missing"); err == nil {
+		t.Fatal("want error for a missing remote")
+	}
+}
+
 // stackHandler serves the three stack-bookmark revsets: the nearest-ancestor
 // query, the nearest-descendant query, and the head query. The head query
 // contains both "::@" and "@::", so it is matched first; the descendant query

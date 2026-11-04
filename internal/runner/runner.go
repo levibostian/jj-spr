@@ -7,15 +7,18 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 	"strings"
 )
 
-// Command is one external process invocation.
+// Command is one external process invocation. Env entries ("KEY=value") are
+// appended to the inherited environment.
 type Command struct {
 	Name  string
 	Args  []string
 	Stdin string
+	Env   []string
 }
 
 // String renders the command as it would be typed in a shell.
@@ -36,6 +39,9 @@ func (Exec) Run(ctx context.Context, c Command) (string, error) {
 	cmd := exec.CommandContext(ctx, c.Name, c.Args...)
 	if c.Stdin != "" {
 		cmd.Stdin = strings.NewReader(c.Stdin)
+	}
+	if len(c.Env) > 0 {
+		cmd.Env = append(os.Environ(), c.Env...)
 	}
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
