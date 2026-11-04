@@ -133,6 +133,104 @@ func (c *Client) Bookmarks(ctx context.Context) ([]Bookmark, error) {
 	return bookmarks, nil
 }
 
+// StackBookmark returns the stack bookmark for the current workspace. @ is used
+// only to locate the stack: the bookmark nearest @ names it, then the stack's
+// top is resolved from that name. So a working copy parked mid-stack publishes
+// the whole stack (base..bookmark) instead of a range truncated at @.
+//
+// Nearest is searched among ancestors-or-self of @ first, then strict
+// descendants, for when the only bookmark sits above @. Per-commit tool
+// bookmarks ("<stack>-<change-id>") name the stack too, so the stack is found
+// before a user bookmark is moved onto @. Remote-tracking bookmarks
+// ("<name>@<remote>") are ignored.
+func (c *Client) StackBookmark(ctx context.Context, base string) (Bookmark, error) {
+	// Nearest bookmark: ancestors-or-self of @, then strict descendants. Tool
+	// bookmarks win: their prefix is the stack already published. Without one,
+	// the user bookmark is the stack.
+	var name string
+	var nearest Bookmark
+	for _, revset := range []string{
+		"heads(bookmarks() & ::@ & ~::" + base + ")",
+		"roots(bookmarks() & @:: & ~::@ & ~::" + base + ")",
+	} {
+		out, err := c.R.Run(ctx, runner.Command{
+			Name: "jj",
+			Args: []string{"log", "--no-graph", "-r", revset, "-T",
+				`change_id ++ "\x1f" ++ bookmarks.join(" ") ++ "\n"`},
+		})
+		if err != nil {
+			return Bookmark{}, err
+		}
+		var users, tools []Bookmark
+		for _, line := range strings.Split(strings.TrimRight(out, "\n"), "\n") {
+			if line == "" {
+				continue
+			}
+			changeID, names, _ := strings.Cut(line, "\x1f")
+			for _, n := range strings.Fields(names) {
+				if strings.Contains(n, "@") {
+					continue // remote-tracking bookmark
+				}
+				if prefix, ok := strings.CutSuffix(n, "-"+changeID); ok {
+					tools = append(tools, Bookmark{Name: prefix, ChangeID: changeID})
+				} else {
+					users = append(users, Bookmark{Name: n, ChangeID: changeID})
+				}
+			}
+		}
+		candidates := tools
+		if len(candidates) == 0 {
+			candidates = users
+		}
+		seen := make(map[string]bool)
+		var names []string
+		for _, b := range candidates {
+			if !seen[b.Name] {
+				seen[b.Name] = true
+				names = append(names, b.Name)
+			}
+		}
+		if len(names) > 1 {
+			return Bookmark{}, fmt.Errorf("multiple stack bookmarks found (%s); pick one with --stack", strings.Join(names, ", "))
+		}
+		if len(names) == 1 {
+			name, nearest = names[0], candidates[0]
+			break
+		}
+	}
+	if name == "" {
+		return Bookmark{}, fmt.Errorf("no stack bookmark found; create one on your top commit or pass --stack")
+	}
+
+	// Resolve the top of the named stack: the topmost bookmarked commit
+	// connected to @ that carries the stack name (a user bookmark) or a
+	// per-commit tool bookmark "<name>-<change-id>".
+	out, err := c.R.Run(ctx, runner.Command{
+		Name: "jj",
+		Args: []string{"log", "--no-graph", "-r",
+			"heads(bookmarks() & (::@ | @::) & ~::" + base + ")",
+			"-T", `change_id ++ "\x1f" ++ bookmarks.join(" ") ++ "\n"`},
+	})
+	if err != nil {
+		return Bookmark{}, err
+	}
+	for _, line := range strings.Split(strings.TrimRight(out, "\n"), "\n") {
+		if line == "" {
+			continue
+		}
+		changeID, names, _ := strings.Cut(line, "\x1f")
+		for _, n := range strings.Fields(names) {
+			if strings.Contains(n, "@") {
+				continue // remote-tracking bookmark
+			}
+			if n == name || n == name+"-"+changeID {
+				return Bookmark{Name: name, ChangeID: changeID}, nil
+			}
+		}
+	}
+	return nearest, nil
+}
+
 // Workspace returns the name of the current jj workspace. The workspace whose
 // target commit is @ is the current one.
 func (c *Client) Workspace(ctx context.Context) (string, error) {

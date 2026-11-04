@@ -22,7 +22,7 @@ func TestSync(t *testing.T) {
 		case commandContains(c, "bookmark", "list"):
 			return bookmarks, nil
 		case commandContains(c, "log") && strings.Contains(c.String(), "~::trunk()"):
-			return "C2\n", nil
+			return "C2\x1fmystack\n", nil
 		case commandContains(c, "log") && strings.Contains(c.String(), "conflicts()"):
 			return "", nil
 		case commandContains(c, "log"):
@@ -66,7 +66,7 @@ func TestStatusHelper(t *testing.T) {
 		case commandContains(c, "bookmark", "list"):
 			return bookmarks, nil
 		case commandContains(c, "log") && strings.Contains(c.String(), "~::main"):
-			return "C2\n", nil
+			return "C2\x1fmystack\n", nil
 		case commandContains(c, "log"):
 			return logOut, nil
 		case commandContains(c, "repo view", "owner"):
@@ -100,7 +100,7 @@ func TestSyncStopsOnConflicts(t *testing.T) {
 		case commandContains(c, "log") && strings.Contains(c.String(), "conflicts()"):
 			return "C1\n", nil
 		case commandContains(c, "log") && strings.Contains(c.String(), "~::trunk()"):
-			return "C2\n", nil
+			return "C2\x1fmystack\n", nil
 		case commandContains(c, "log"):
 			return logOut, nil
 		case commandContains(c, "pulls"):

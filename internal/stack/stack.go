@@ -4,7 +4,6 @@ package stack
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/levibostian/jj-spr/internal/gh"
 	"github.com/levibostian/jj-spr/internal/jj"
@@ -66,8 +65,8 @@ func baseRev(opts Options) string {
 	return "trunk()"
 }
 
-// Resolve builds the stack for a bookmark. When Stack is empty the single
-// non-tool bookmark strictly after trunk is chosen.
+// Resolve builds the stack for a bookmark. When Stack is empty the bookmark
+// nearest @ above base is chosen (see jj.Client.StackBookmark).
 func Resolve(ctx context.Context, jjc *jj.Client, ghc *gh.Client, opts Options) (*Stack, error) {
 	base := opts.Base
 	if base == "" {
@@ -76,11 +75,7 @@ func Resolve(ctx context.Context, jjc *jj.Client, ghc *gh.Client, opts Options) 
 			return nil, err
 		}
 	}
-	bookmarks, err := jjc.Bookmarks(ctx)
-	if err != nil {
-		return nil, err
-	}
-	bookmark, err := chooseBookmark(ctx, jjc, bookmarks, opts.Stack, baseRev(opts))
+	bookmark, err := chooseBookmark(ctx, jjc, opts.Stack, baseRev(opts))
 	if err != nil {
 		return nil, err
 	}
@@ -108,82 +103,20 @@ func Resolve(ctx context.Context, jjc *jj.Client, ghc *gh.Client, opts Options) 
 	return s, nil
 }
 
-// chooseBookmark picks the stack bookmark. Per-commit tool bookmarks are named
-// "<stack>-<change-id>", so they are recognized by that suffix and skipped.
-func chooseBookmark(ctx context.Context, jjc *jj.Client, bookmarks []jj.Bookmark, want, base string) (jj.Bookmark, error) {
-	if want != "" {
-		for _, b := range bookmarks {
-			if b.Name == want {
-				return b, nil
-			}
-		}
-		return jj.Bookmark{}, fmt.Errorf("bookmark %q not found", want)
+// chooseBookmark picks the stack bookmark. With --stack it is the named
+// bookmark; otherwise it is the current workspace's stack (jjc.StackBookmark).
+func chooseBookmark(ctx context.Context, jjc *jj.Client, want, base string) (jj.Bookmark, error) {
+	if want == "" {
+		return jjc.StackBookmark(ctx, base)
 	}
-	var candidates []jj.Bookmark
+	bookmarks, err := jjc.Bookmarks(ctx)
+	if err != nil {
+		return jj.Bookmark{}, err
+	}
 	for _, b := range bookmarks {
-		if strings.HasSuffix(b.Name, "-"+b.ChangeID) {
-			continue // tool bookmark
-		}
-		// Exclude bookmarks at or below the base (e.g. main). A stack bookmark
-		// may sit behind the base (just after a fetch), so descendants-of-base
-		// is not required.
-		ok, err := jjc.Match(ctx, b.ChangeID+" & ~::"+base)
-		if err != nil {
-			return jj.Bookmark{}, err
-		}
-		if ok {
-			candidates = append(candidates, b)
-		}
-	}
-	if len(candidates) > 1 {
-		b, ok, err := pickWorkspaceStack(ctx, jjc, candidates)
-		if err != nil {
-			return jj.Bookmark{}, err
-		}
-		if ok {
+		if b.Name == want {
 			return b, nil
 		}
 	}
-	switch len(candidates) {
-	case 0:
-		return jj.Bookmark{}, fmt.Errorf("no stack bookmark found; create one on your top commit or pass --stack")
-	case 1:
-		return candidates[0], nil
-	default:
-		var names []string
-		for _, b := range candidates {
-			names = append(names, b.Name)
-		}
-		return jj.Bookmark{}, fmt.Errorf("multiple stack bookmarks found (%s); pick one with --stack", strings.Join(names, ", "))
-	}
-}
-
-// pickWorkspaceStack narrows stacks that belong to different jj workspaces. It
-// prefers the stack checked out in this workspace (its bookmark is at or below
-// @), then the stack named after the workspace. Bookmark discovery is
-// repo-wide, so without this every workspace's stack looks like a candidate.
-// The workspace lookup is best-effort; an error falls back to the caller's
-// "pick one" message.
-func pickWorkspaceStack(ctx context.Context, jjc *jj.Client, candidates []jj.Bookmark) (jj.Bookmark, bool, error) {
-	var checkedOut []jj.Bookmark
-	for _, b := range candidates {
-		ok, err := jjc.Match(ctx, b.ChangeID+" & ::@")
-		if err != nil {
-			return jj.Bookmark{}, false, err
-		}
-		if ok {
-			checkedOut = append(checkedOut, b)
-		}
-	}
-	if len(checkedOut) == 1 {
-		return checkedOut[0], true, nil
-	}
-	if workspace, err := jjc.Workspace(ctx); err == nil && workspace != "" {
-		for _, b := range candidates {
-			if b.Name == workspace {
-				return b, true, nil
-			}
-		}
-	}
-	return jj.Bookmark{}, false, nil
+	return jj.Bookmark{}, fmt.Errorf("bookmark %q not found", want)
 }

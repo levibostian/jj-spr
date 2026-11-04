@@ -29,7 +29,7 @@ func fullHandler(linked *bool, creates *int, existing bool) func(runner.Command)
 		case strings.Contains(s, "bookmark list"):
 			return "mystack\tC2\nmystack-C1\tC1\nmystack-C2\tC2\n", nil
 		case strings.Contains(s, "~::"):
-			return "C2\n", nil
+			return "C2\x1fmystack\n", nil
 		case strings.Contains(s, "conflicts()"):
 			return "", nil
 		case strings.Contains(s, "jj log"):

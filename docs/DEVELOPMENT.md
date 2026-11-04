@@ -26,9 +26,17 @@ mock the real binaries.
   `-<change-id>` suffix during stack auto-detection. A dash, not a slash: git
   forbids `refs/heads/<bookmark>` and `refs/heads/<bookmark>/<change-id>`
   coexisting, and the user's bookmark is also exported as a git ref.
-- **Stack auto-detection accepts bookmarks behind trunk.** `chooseBookmark`
-  keeps non-tool bookmarks that are not ancestors of `trunk()` (`<C> & ~::trunk()`),
-  so `sync` still finds the stack after a fetch moves trunk ahead.
+- **Stack auto-detection walks out from `@`, then resolves the stack top.**
+  `jj.StackBookmark` finds the bookmark nearest `@` — ancestors-or-self first
+  (`heads(bookmarks() & ::@ & ~::trunk())`), then strict descendants
+  (`roots(bookmarks() & @:: & ~::@ & ~::trunk())`). That nearest bookmark only
+  names the stack; the top is then resolved to the topmost bookmarked commit
+  carrying that name (a user bookmark, or a per-commit tool bookmark
+  `<stack>-<change-id>`). So `@` can sit mid-stack and the whole
+  `base..bookmark` stack is still published, unrelated stacks elsewhere in the
+  repo are never candidates, and detection works before a user bookmark is
+  moved onto `@`. Distinct stack names on the nearest commit are reported as an
+  ambiguity for `--stack`.
 - **Push allows empty descriptions.** Stack branches can contain an empty
   working-copy commit, so `jj git push` runs with `--allow-empty-description`.
 - **`gh stack link` is append-only.** It cannot reorder or remove PRs, and it

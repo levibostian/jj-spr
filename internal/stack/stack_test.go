@@ -44,10 +44,8 @@ func resolveHandler(bookmarks, logOut string, prs map[string]string) func(runner
 			return "me\n", nil
 		case commandContains(c, "bookmark", "list"):
 			return bookmarks, nil
-		case commandContains(c, "log") && strings.Contains(c.String(), "C2 & ~::trunk()"):
-			return "C2\n", nil
 		case commandContains(c, "log") && strings.Contains(c.String(), "~::trunk()"):
-			return "", nil
+			return "C2\x1fmystack\n", nil
 		case commandContains(c, "log"):
 			return logOut, nil
 		case commandContains(c, "pulls"):
@@ -111,48 +109,24 @@ func TestResolveNoBookmark(t *testing.T) {
 	}
 }
 
-func TestResolveMultipleBookmarks(t *testing.T) {
-	bookmarks := "a\tA\nb\tB\n"
-	jjc, ghc, _ := clients(func(c runner.Command) (string, error) {
-		switch {
-		case commandContains(c, "log", "remote_bookmarks"):
-			return "main\n", nil
-		case commandContains(c, "bookmark", "list"):
-			return bookmarks, nil
-		case commandContains(c, "log"):
-			return "A\n", nil
-		}
-		return "", fmt.Errorf("unexpected: %s", c.String())
-	})
-	if _, err := Resolve(context.Background(), jjc, ghc, Options{}); err == nil {
-		t.Fatal("want ambiguity error")
-	}
-}
-
-// twoStackHandler serves two stack bookmarks, ws (change A) and other (change
-// B). checkedChange is the change ID that should look checked out (@
-// reachable); checkedChange "" makes both look checked out. workspace is the
-// name to report for the current workspace (empty means report none).
-func twoStackHandler(checkedChange, workspace string) func(runner.Command) (string, error) {
+// bookmarkHandler serves the three stack-bookmark revsets. ancestorRev,
+// descendantRev and headRev are the raw "change-id\x1fnames" lines for the
+// nearest-ancestor, nearest-descendant and stack-head queries; "" models "none
+// found". The head query contains both markers, so it is matched first.
+func bookmarkHandler(ancestorRev, descendantRev, headRev string) func(runner.Command) (string, error) {
 	return func(c runner.Command) (string, error) {
 		s := c.String()
 		switch {
 		case commandContains(c, "log", "remote_bookmarks"):
 			return "main\n", nil
-		case commandContains(c, "bookmark", "list"):
-			return "ws\tA\nother\tB\n", nil
-		case commandContains(c, "workspace", "list"):
-			return workspace + "\tZ\n", nil
-		case commandContains(c, "log") && strings.Contains(s, "-r @ "):
-			return "Z\n", nil
-		case commandContains(c, "log") && strings.Contains(s, checkedChange+" & ::@"):
-			return "A\n", nil
-		case commandContains(c, "log") && strings.Contains(s, " & ::@"):
-			return "", nil
-		case commandContains(c, "log") && strings.Contains(s, "~::trunk()"):
-			return "A\n", nil
+		case commandContains(c, "log") && strings.Contains(s, "::@ | @::"):
+			return headRev, nil
+		case commandContains(c, "log") && strings.Contains(s, "@::"):
+			return descendantRev, nil
+		case commandContains(c, "log") && strings.Contains(s, "~::"):
+			return ancestorRev, nil
 		case commandContains(c, "log"):
-			return commitLine("A", "x\n", false), nil
+			return commitLine("C", "x\n", false), nil
 		case commandContains(c, "repo view", "owner"):
 			return "me\n", nil
 		case commandContains(c, "pulls"):
@@ -162,25 +136,35 @@ func twoStackHandler(checkedChange, workspace string) func(runner.Command) (stri
 	}
 }
 
-func TestResolvePicksCheckedOutStack(t *testing.T) {
-	jjc, ghc, _ := clients(twoStackHandler("A", ""))
+func TestResolveNearestAncestorBookmark(t *testing.T) {
+	// @ is parked mid-stack next to a tool bookmark; the user bookmark above
+	// names the stack and sets the top, so the whole stack resolves.
+	jjc, ghc, _ := clients(bookmarkHandler("B\x1fmystack-B", "ignored\x1fother", "C\x1fmystack"))
 	st, err := Resolve(context.Background(), jjc, ghc, Options{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if st.Bookmark != "ws" {
-		t.Fatalf("got %q", st.Bookmark)
+	if st.Bookmark != "mystack" || st.HeadChangeID != "C" {
+		t.Fatalf("got %q head %q", st.Bookmark, st.HeadChangeID)
 	}
 }
 
-func TestResolvePicksWorkspaceStack(t *testing.T) {
-	jjc, ghc, _ := clients(twoStackHandler("", "other"))
+func TestResolveFallsBackToDescendantBookmark(t *testing.T) {
+	jjc, ghc, _ := clients(bookmarkHandler("", "C\x1fother", "C\x1fother"))
 	st, err := Resolve(context.Background(), jjc, ghc, Options{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if st.Bookmark != "other" {
 		t.Fatalf("got %q", st.Bookmark)
+	}
+}
+
+func TestResolveMultipleBookmarks(t *testing.T) {
+	jjc, ghc, _ := clients(bookmarkHandler("A\x1falpha beta", "", ""))
+	_, err := Resolve(context.Background(), jjc, ghc, Options{})
+	if err == nil || !strings.Contains(err.Error(), "alpha") || !strings.Contains(err.Error(), "beta") {
+		t.Fatalf("want ambiguity naming both, got %v", err)
 	}
 }
 

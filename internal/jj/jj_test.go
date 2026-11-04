@@ -62,6 +62,87 @@ func TestBookmarksParse(t *testing.T) {
 	}
 }
 
+// stackHandler serves the three stack-bookmark revsets: the nearest-ancestor
+// query, the nearest-descendant query, and the head query. The head query
+// contains both "::@" and "@::", so it is matched first; the descendant query
+// also contains "~::", so it is matched before the ancestor.
+func stackHandler(ancestor, descendant, head string) *runner.Fake {
+	return &runner.Fake{Handler: func(c runner.Command) (string, error) {
+		s := c.String()
+		switch {
+		case strings.Contains(s, "::@ | @::"):
+			return head, nil
+		case strings.Contains(s, "@::"):
+			return descendant, nil
+		case strings.Contains(s, "~::"):
+			return ancestor, nil
+		}
+		return "", nil
+	}}
+}
+
+func TestStackBookmarkResolvesStackTop(t *testing.T) {
+	// @ sits on B next to a tool bookmark; the user bookmark at C names the
+	// stack top. The result must be C, so the whole stack is published.
+	c := &Client{R: stackHandler("B\x1fmystack-B", "ignored\x1fother", "C\x1fmystack")}
+	got, err := c.StackBookmark(context.Background(), "trunk()")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Name != "mystack" || got.ChangeID != "C" {
+		t.Fatalf("got %+v", got)
+	}
+}
+
+func TestStackBookmarkHeadFromToolBookmark(t *testing.T) {
+	// No user bookmark: the topmost tool bookmark names the stack top.
+	c := &Client{R: stackHandler("B\x1fmystack-B", "", "C\x1fmystack-C")}
+	got, err := c.StackBookmark(context.Background(), "trunk()")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Name != "mystack" || got.ChangeID != "C" {
+		t.Fatalf("got %+v", got)
+	}
+}
+
+func TestStackBookmarkFallsBackToDescendant(t *testing.T) {
+	c := &Client{R: stackHandler("", "C\x1fother", "C\x1fother")}
+	got, err := c.StackBookmark(context.Background(), "trunk()")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Name != "other" || got.ChangeID != "C" {
+		t.Fatalf("got %+v", got)
+	}
+}
+
+func TestStackBookmarkIgnoresRemote(t *testing.T) {
+	c := &Client{R: stackHandler("A\x1fmystack me@origin", "", "A\x1fmystack")}
+	got, err := c.StackBookmark(context.Background(), "trunk()")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Name != "mystack" {
+		t.Fatalf("got %+v", got)
+	}
+}
+
+func TestStackBookmarkAmbiguous(t *testing.T) {
+	c := &Client{R: stackHandler("A\x1falpha beta", "", "")}
+	_, err := c.StackBookmark(context.Background(), "trunk()")
+	if err == nil || !strings.Contains(err.Error(), "alpha") || !strings.Contains(err.Error(), "beta") {
+		t.Fatalf("want ambiguity naming both, got %v", err)
+	}
+}
+
+func TestStackBookmarkNone(t *testing.T) {
+	c := &Client{R: stackHandler("", "", "")}
+	if _, err := c.StackBookmark(context.Background(), "trunk()"); err == nil {
+		t.Fatal("want error")
+	}
+}
+
 func TestWorkspace(t *testing.T) {
 	f := &runner.Fake{Handler: func(c runner.Command) (string, error) {
 		if strings.Contains(c.String(), "workspace list") {
