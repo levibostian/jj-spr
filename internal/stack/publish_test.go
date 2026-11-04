@@ -153,7 +153,7 @@ func TestPublishUpdatesExistingPRs(t *testing.T) {
 		case commandContains(c, "bookmark", "list"):
 			return bookmarks, nil
 		case commandContains(c, "log") && strings.Contains(c.String(), "~::trunk()"):
-			return "C2\n", nil
+			return "C2\x1fmystack\n", nil
 		case commandContains(c, "log"):
 			return logOut, nil
 		case commandContains(c, "pulls") && strings.Contains(c.String(), "mystack-C1"):
@@ -198,7 +198,7 @@ func TestPublishRetargetsBaseBeforePushOnReorder(t *testing.T) {
 		case commandContains(c, "bookmark", "list"):
 			return bookmarks, nil
 		case commandContains(c, "log") && strings.Contains(c.String(), "~::trunk()"):
-			return "C3\n", nil
+			return "C3\x1fmystack\n", nil
 		case commandContains(c, "log"):
 			return logOut, nil
 		case commandContains(c, "pulls") && strings.Contains(c.String(), "mystack-C1"):
@@ -257,7 +257,7 @@ func TestPublishRetargetsBaseOnMidStackRemoval(t *testing.T) {
 		case commandContains(c, "bookmark", "list"):
 			return bookmarks, nil
 		case commandContains(c, "log") && strings.Contains(c.String(), "~::trunk()"):
-			return "C3\n", nil
+			return "C3\x1fmystack\n", nil
 		case commandContains(c, "log"):
 			return logOut, nil
 		case commandContains(c, "pulls") && strings.Contains(c.String(), "mystack-C1"):
@@ -303,7 +303,7 @@ func TestPublishAppendDoesNotResetOrRetarget(t *testing.T) {
 		case commandContains(c, "bookmark", "list"):
 			return bookmarks, nil
 		case commandContains(c, "log") && strings.Contains(c.String(), "~::trunk()"):
-			return "C3\n", nil
+			return "C3\x1fmystack\n", nil
 		case commandContains(c, "log"):
 			return logOut, nil
 		case commandContains(c, "pulls") && strings.Contains(c.String(), "mystack-C1"):
@@ -371,7 +371,7 @@ func TestPublishCreatesPRsAndStack(t *testing.T) {
 		case commandContains(c, "bookmark", "list"):
 			return bookmarks, nil
 		case commandContains(c, "log") && strings.Contains(c.String(), "~::trunk()"):
-			return "C2\n", nil
+			return "C2\x1fmystack\n", nil
 		case commandContains(c, "log"):
 			return logOut, nil
 		case commandContains(c, "pulls"):
