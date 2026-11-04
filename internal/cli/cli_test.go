@@ -24,8 +24,8 @@ func fullHandler(linked *bool, creates *int, existing bool) func(runner.Command)
 			return "", nil
 		case strings.Contains(s, "remote_bookmarks"):
 			return "main\n", nil
-		case strings.Contains(s, "repo view --json owner"):
-			return "me\n", nil
+		case strings.Contains(s, "git remote list"):
+			return "origin git@github.com:me/repo.git\n", nil
 		case strings.Contains(s, "bookmark list"):
 			return "mystack\tC2\nmystack-C1\tC1\nmystack-C2\tC2\n", nil
 		case strings.Contains(s, "~::"):
@@ -130,7 +130,10 @@ func TestUpdateError(t *testing.T) {
 func TestUpdateMissingExtension(t *testing.T) {
 	app, f, _, errb := newTestApp()
 	f.Handler = func(c runner.Command) (string, error) {
-		if strings.Contains(c.String(), "stack --help") {
+		switch {
+		case strings.Contains(c.String(), "git remote list"):
+			return "origin git@github.com:me/repo.git\n", nil
+		case strings.Contains(c.String(), "stack --help"):
 			return "", fmt.Errorf("no stack")
 		}
 		return "", nil

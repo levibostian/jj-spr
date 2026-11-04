@@ -37,6 +37,20 @@ func TestExecStdin(t *testing.T) {
 	}
 }
 
+func TestExecEnv(t *testing.T) {
+	out, err := Exec{}.Run(context.Background(), Command{
+		Name: "sh",
+		Args: []string{"-c", `printf %s "$JJSPR_TEST"`},
+		Env:  []string{"JJSPR_TEST=hello"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out != "hello" {
+		t.Fatalf("got %q", out)
+	}
+}
+
 func TestExecErrorIncludesStderr(t *testing.T) {
 	_, err := Exec{}.Run(context.Background(), Command{Name: "sh", Args: []string{"-c", "echo boom >&2; exit 3"}})
 	if err == nil || !strings.Contains(err.Error(), "boom") {

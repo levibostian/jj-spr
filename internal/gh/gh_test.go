@@ -24,13 +24,33 @@ func TestAvailable(t *testing.T) {
 	}
 }
 
-func TestOwner(t *testing.T) {
-	c, f := newClient(func(runner.Command) (string, error) { return "levibostian\n", nil })
-	if got, _ := c.Owner(context.Background()); got != "levibostian" {
-		t.Fatalf("got %q", got)
+func TestParseRemote(t *testing.T) {
+	for _, tc := range []struct {
+		url  string
+		want Repo
+	}{
+		{"git@github.com:levibostian/jj-spr.git", Repo{Owner: "levibostian", Name: "jj-spr"}},
+		{"https://github.com/levibostian/jj-spr.git", Repo{Owner: "levibostian", Name: "jj-spr"}},
+		{"ssh://git@github.com/levibostian/jj-spr", Repo{Owner: "levibostian", Name: "jj-spr"}},
+	} {
+		got, err := ParseRemote(tc.url)
+		if err != nil || got != tc.want {
+			t.Fatalf("ParseRemote(%q) = %+v, %v; want %+v", tc.url, got, err, tc.want)
+		}
 	}
-	if !strings.Contains(f.Calls[0].String(), "repo view") {
-		t.Fatalf("got %q", f.Calls[0].String())
+	if _, err := ParseRemote("https://gitlab.com/o/r.git"); err == nil {
+		t.Fatal("want error for a non-GitHub remote")
+	}
+}
+
+func TestClientSetsGHRepo(t *testing.T) {
+	c, f := newClient(func(runner.Command) (string, error) { return "", nil })
+	c.Repo = Repo{Owner: "o", Name: "r"}
+	if err := c.EditPRBase(context.Background(), 3, "main"); err != nil {
+		t.Fatal(err)
+	}
+	if env := strings.Join(f.Calls[0].Env, ","); env != "GH_REPO=o/r" {
+		t.Fatalf("got env %q", env)
 	}
 }
 

@@ -89,12 +89,26 @@ func (a *App) parse(name string, args []string) (flags, error) {
 	return f, nil
 }
 
-func (a *App) clients(f flags) (*jj.Client, *gh.Client) {
+// clients builds the jj and gh clients. It resolves owner/repo from the jj
+// remote once and pins it on the gh client as GH_REPO, so gh works without a
+// .git checkout.
+func (a *App) clients(ctx context.Context, f flags) (*jj.Client, *gh.Client, error) {
 	r := a.Runner
 	if f.verbose {
 		r = runner.Verbose{Inner: r, Writer: a.Stdout}
 	}
-	return &jj.Client{R: r}, &gh.Client{R: r}
+	jjc := &jj.Client{R: r}
+	ghc := &gh.Client{R: r}
+	remoteURL, err := jjc.RemoteURL(ctx, f.opts.Remote)
+	if err != nil {
+		return nil, nil, err
+	}
+	repo, err := gh.ParseRemote(remoteURL)
+	if err != nil {
+		return nil, nil, err
+	}
+	ghc.Repo = repo
+	return jjc, ghc, nil
 }
 
 func (a *App) update(ctx context.Context, args []string) int {
@@ -102,7 +116,11 @@ func (a *App) update(ctx context.Context, args []string) int {
 	if err != nil {
 		return 2
 	}
-	jjc, ghc := a.clients(f)
+	jjc, ghc, err := a.clients(ctx, f)
+	if err != nil {
+		fmt.Fprintln(a.Stderr, "error:", err)
+		return 1
+	}
 	if err := ghc.Available(ctx); err != nil {
 		fmt.Fprintln(a.Stderr, "error:", err)
 		return 1
@@ -121,7 +139,11 @@ func (a *App) sync(ctx context.Context, args []string) int {
 	if err != nil {
 		return 2
 	}
-	jjc, ghc := a.clients(f)
+	jjc, ghc, err := a.clients(ctx, f)
+	if err != nil {
+		fmt.Fprintln(a.Stderr, "error:", err)
+		return 1
+	}
 	if err := ghc.Available(ctx); err != nil {
 		fmt.Fprintln(a.Stderr, "error:", err)
 		return 1
@@ -140,7 +162,11 @@ func (a *App) status(ctx context.Context, args []string) int {
 	if err != nil {
 		return 2
 	}
-	jjc, ghc := a.clients(f)
+	jjc, ghc, err := a.clients(ctx, f)
+	if err != nil {
+		fmt.Fprintln(a.Stderr, "error:", err)
+		return 1
+	}
 	report, err := stack.Status(ctx, jjc, ghc, f.opts)
 	if err != nil {
 		fmt.Fprintln(a.Stderr, "error:", err)

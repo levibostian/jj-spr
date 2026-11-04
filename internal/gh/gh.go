@@ -11,9 +11,17 @@ import (
 	"github.com/levibostian/jj-spr/internal/runner"
 )
 
-// Client runs gh commands.
+// Repo is a GitHub repository.
+type Repo struct {
+	Owner string
+	Name  string
+}
+
+// Client runs gh commands. Repo is passed to every call as GH_REPO so gh never
+// has to discover the repository from a .git checkout.
 type Client struct {
-	R runner.Runner
+	R    runner.Runner
+	Repo Repo
 }
 
 // PR is a pull request, from either the pulls list API or `gh pr view`.
@@ -48,13 +56,32 @@ type Check struct {
 	Conclusion string `json:"conclusion"`
 }
 
-// Owner returns the repository owner login.
-func (c *Client) Owner(ctx context.Context) (string, error) {
-	return c.jq(ctx, "repo", "view", "--json", "owner", "--jq", ".owner.login")
+// ParseRemote extracts the repository from a GitHub Git remote URL, in either
+// the scp-like (git@github.com:owner/name.git) or URL form.
+func ParseRemote(remoteURL string) (Repo, error) {
+	_, path, found := strings.Cut(remoteURL, "github.com")
+	if !found {
+		return Repo{}, fmt.Errorf("cannot find GitHub repository in remote %q", remoteURL)
+	}
+	owner, name, ok := strings.Cut(strings.TrimLeft(path, ":/"), "/")
+	name = strings.TrimSuffix(name, ".git")
+	if !ok || owner == "" || name == "" {
+		return Repo{}, fmt.Errorf("cannot find GitHub repository in remote %q", remoteURL)
+	}
+	return Repo{Owner: owner, Name: name}, nil
+}
+
+// run executes a gh command with GH_REPO set from the resolved remote.
+func (c *Client) run(ctx context.Context, stdin string, args ...string) (string, error) {
+	cmd := runner.Command{Name: "gh", Args: args, Stdin: stdin}
+	if c.Repo.Owner != "" {
+		cmd.Env = []string{"GH_REPO=" + c.Repo.Owner + "/" + c.Repo.Name}
+	}
+	return c.R.Run(ctx, cmd)
 }
 
 func (c *Client) jq(ctx context.Context, args ...string) (string, error) {
-	out, err := c.R.Run(ctx, runner.Command{Name: "gh", Args: args})
+	out, err := c.run(ctx, "", args...)
 	if err != nil {
 		return "", err
 	}
@@ -63,7 +90,7 @@ func (c *Client) jq(ctx context.Context, args ...string) (string, error) {
 
 // Available reports whether the gh-stack extension is installed.
 func (c *Client) Available(ctx context.Context) error {
-	_, err := c.R.Run(ctx, runner.Command{Name: "gh", Args: []string{"stack", "--help"}})
+	_, err := c.run(ctx, "", "stack", "--help")
 	if err != nil {
 		return fmt.Errorf("gh stack is not available: install it with `gh extension install github/gh-stack` (%w)", err)
 	}
@@ -72,12 +99,12 @@ func (c *Client) Available(ctx context.Context) error {
 
 // FindPR returns the most recent PR whose head is owner/branch, or nil.
 func (c *Client) FindPR(ctx context.Context, owner, branch string) (*PR, error) {
-	out, err := c.R.Run(ctx, runner.Command{Name: "gh", Args: []string{
+	out, err := c.run(ctx, "",
 		"api", "--method", "GET", "repos/{owner}/{repo}/pulls",
-		"-f", "head=" + owner + ":" + branch,
+		"-f", "head="+owner+":"+branch,
 		"-f", "state=all",
 		"-f", "per_page=100",
-	}})
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +149,7 @@ func (c *Client) CreatePR(ctx context.Context, head, base, title, body string, d
 	if draft {
 		args = append(args, "--draft")
 	}
-	out, err := c.R.Run(ctx, runner.Command{Name: "gh", Args: args, Stdin: body})
+	out, err := c.run(ctx, body, args...)
 	if err != nil {
 		return 0, err
 	}
@@ -136,11 +163,7 @@ func (c *Client) CreatePR(ctx context.Context, head, base, title, body string, d
 
 // EditPR updates a PR's title and body.
 func (c *Client) EditPR(ctx context.Context, number int, title, body string) error {
-	_, err := c.R.Run(ctx, runner.Command{
-		Name:  "gh",
-		Args:  []string{"pr", "edit", strconv.Itoa(number), "--title", title, "--body-file", "-"},
-		Stdin: body,
-	})
+	_, err := c.run(ctx, body, "pr", "edit", strconv.Itoa(number), "--title", title, "--body-file", "-")
 	return err
 }
 
@@ -152,10 +175,10 @@ func (c *Client) EditPRBase(ctx context.Context, number int, base string) error 
 
 // ViewPR returns the PR for a head branch with status fields.
 func (c *Client) ViewPR(ctx context.Context, branch string) (*PR, error) {
-	out, err := c.R.Run(ctx, runner.Command{Name: "gh", Args: []string{
+	out, err := c.run(ctx, "",
 		"pr", "view", branch, "--json",
 		"number,title,state,isDraft,mergeable,mergeStateStatus,reviewDecision,statusCheckRollup,url,baseRefName",
-	}})
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -199,9 +222,7 @@ func (s *RemoteStack) HasMerged() bool {
 
 // FindStackForPR returns the stack containing pr, or nil.
 func (c *Client) FindStackForPR(ctx context.Context, pr int) (*RemoteStack, error) {
-	out, err := c.R.Run(ctx, runner.Command{Name: "gh", Args: []string{
-		"api", "repos/{owner}/{repo}/stacks?pull_request=" + strconv.Itoa(pr),
-	}})
+	out, err := c.run(ctx, "", "api", "repos/{owner}/{repo}/stacks?pull_request="+strconv.Itoa(pr))
 	if err != nil {
 		return nil, err
 	}

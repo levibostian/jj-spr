@@ -28,7 +28,8 @@ into a native GitHub stack, so you can:
 - [jj](https://jj-vcs.dev) (recent version)
 - [GitHub CLI](https://cli.github.com) plus the `gh-stack` extension:
   `gh extension install github/gh-stack`
-- A colocated jj/git repo with a GitHub `origin`.
+- A jj repo with a GitHub `origin`. It runs from any jj workspace, colocated
+  or not — no `.git` checkout required.
 
 ## Quick start
 

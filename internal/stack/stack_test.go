@@ -23,7 +23,7 @@ func commandContains(c runner.Command, parts ...string) bool {
 
 func clients(handler func(runner.Command) (string, error)) (*jj.Client, *gh.Client, *runner.Fake) {
 	f := &runner.Fake{Handler: handler}
-	return &jj.Client{R: f}, &gh.Client{R: f}, f
+	return &jj.Client{R: f}, &gh.Client{R: f, Repo: gh.Repo{Owner: "me", Name: "repo"}}, f
 }
 
 func commitLine(changeID, description string, empty bool) string {
@@ -40,8 +40,6 @@ func resolveHandler(bookmarks, logOut string, prs map[string]string) func(runner
 		switch {
 		case commandContains(c, "log", "remote_bookmarks"):
 			return "main\n", nil
-		case commandContains(c, "repo view", "owner"):
-			return "me\n", nil
 		case commandContains(c, "bookmark", "list"):
 			return bookmarks, nil
 		case commandContains(c, "log") && strings.Contains(c.String(), "~::trunk()"):
@@ -127,8 +125,6 @@ func bookmarkHandler(ancestorRev, descendantRev, headRev string) func(runner.Com
 			return ancestorRev, nil
 		case commandContains(c, "log"):
 			return commitLine("C", "x\n", false), nil
-		case commandContains(c, "repo view", "owner"):
-			return "me\n", nil
 		case commandContains(c, "pulls"):
 			return "[]", nil
 		}
