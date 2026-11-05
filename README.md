@@ -68,8 +68,8 @@ Example `status`:
 
 ```
 mystack  (base: main)
-  ➖➖📝❌ #43     zmylxtxx Add UI
-  ✅⏳✅✅ #42     rlvkypqw Add API
+  ➖➖❌❌ #43     zmylxtxx Add UI
+  ⌛✅✅✅ #42     rlvkypqw Add API
   ✅✅✅✅ #41     qpvuntsm Add model
    │ │ │ └─ stack: all PRs below are ready
    │ │ └─── conflicts: no merge conflicts
