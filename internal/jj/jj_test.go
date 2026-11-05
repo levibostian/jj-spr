@@ -145,6 +145,37 @@ func TestStackBookmarkIgnoresRemote(t *testing.T) {
 	}
 }
 
+func TestStackBookmarkIgnoresDivergedMarker(t *testing.T) {
+	// jj renders a local bookmark that diverged from its remote with a trailing
+	// "*". The raw name must come from bookmarks.name(), not the rendered join.
+	wantName := "mystack"
+	f := &runner.Fake{Handler: func(c runner.Command) (string, error) {
+		s := c.String()
+		name := wantName
+		if strings.Contains(s, "bookmarks.join") {
+			name += "*" // emulate jj's diverged-bookmark marker
+		}
+		commitLine := "A\x1f" + name
+		switch {
+		case strings.Contains(s, "::@ | @::"):
+			return commitLine, nil
+		case strings.Contains(s, "@::"):
+			return "", nil
+		case strings.Contains(s, "~::"):
+			return commitLine, nil
+		}
+		return "", nil
+	}}
+	c := &Client{R: f}
+	got, err := c.StackBookmark(context.Background(), "trunk()")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Name != wantName {
+		t.Fatalf("got %+v", got)
+	}
+}
+
 func TestStackBookmarkAmbiguous(t *testing.T) {
 	c := &Client{R: stackHandler("A\x1falpha beta", "", "")}
 	_, err := c.StackBookmark(context.Background(), "trunk()")
