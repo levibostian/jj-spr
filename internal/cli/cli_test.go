@@ -43,7 +43,7 @@ func fullHandler(linked *bool, creates *int, existing bool) func(runner.Command)
 			*creates++
 			return fmt.Sprintf("https://github.com/me/repo/pull/%d\n", *creates), nil
 		case strings.Contains(s, "pr view"):
-			return `{"number":1,"title":"Add model","state":"OPEN","mergeStateStatus":"CLEAN","reviewDecision":"APPROVED","statusCheckRollup":[{"state":"SUCCESS"}]}`, nil
+			return `{"number":1,"title":"Add model","state":"OPEN","mergeable":"MERGEABLE","reviewDecision":"APPROVED","statusCheckRollup":[{"state":"SUCCESS"}]}`, nil
 		case strings.Contains(s, "stack link"):
 			*linked = true
 			return "", nil
@@ -164,36 +164,36 @@ func TestStatusOutput(t *testing.T) {
 	app, f, out, errb := newTestApp()
 	f.Handler = func(c runner.Command) (string, error) {
 		s := c.String()
-		c1, c2, c3 := "mystack-C1", "mystack-C2", "mystack-C3"
+		branch1, branch2, branch3 := "mystack-C1", "mystack-C2", "mystack-C3"
 		switch {
 		case strings.Contains(s, "git remote list"):
 			return "origin git@github.com:me/repo.git\n", nil
 		case strings.Contains(s, "remote_bookmarks"):
 			return "main\n", nil
 		case strings.Contains(s, "bookmark list"):
-			return "mystack\tC3\n" + c1 + "\tC1\n" + c2 + "\tC2\n" + c3 + "\tC3\n", nil
+			return "mystack\tC3\n" + branch1 + "\tC1\n" + branch2 + "\tC2\n" + branch3 + "\tC3\n", nil
 		case strings.Contains(s, "~::"):
 			return "C3\x1fmystack\n", nil
 		case strings.Contains(s, "jj log"):
 			return jjLine("C1", "Add model\n") + jjLine("C2", "Add API\n") + jjLine("C3", "Add UI\n"), nil
 		case strings.Contains(s, "pulls"):
 			switch {
-			case strings.Contains(s, c1):
-				return `[{"number":41,"state":"open","head":{"ref":"` + c1 + `"},"base":{"ref":"main"}}]`, nil
-			case strings.Contains(s, c2):
-				return `[{"number":42,"state":"open","head":{"ref":"` + c2 + `"},"base":{"ref":"main"}}]`, nil
-			case strings.Contains(s, c3):
-				return `[{"number":43,"state":"open","head":{"ref":"` + c3 + `"},"base":{"ref":"main"}}]`, nil
+			case strings.Contains(s, branch1):
+				return `[{"number":41,"state":"open","head":{"ref":"` + branch1 + `"},"base":{"ref":"main"}}]`, nil
+			case strings.Contains(s, branch2):
+				return `[{"number":42,"state":"open","head":{"ref":"` + branch2 + `"},"base":{"ref":"main"}}]`, nil
+			case strings.Contains(s, branch3):
+				return `[{"number":43,"state":"open","head":{"ref":"` + branch3 + `"},"base":{"ref":"main"}}]`, nil
 			}
 			return "[]", nil
 		case strings.Contains(s, "pr view"):
 			switch {
-			case strings.Contains(s, c1):
-				return `{"number":41,"title":"Add model","state":"OPEN","mergeStateStatus":"CLEAN","reviewDecision":"APPROVED","statusCheckRollup":[{"state":"SUCCESS"}]}`, nil
-			case strings.Contains(s, c2):
-				return `{"number":42,"title":"Add API","state":"OPEN","mergeStateStatus":"CLEAN","reviewDecision":"APPROVED","statusCheckRollup":[{"state":"PENDING"}]}`, nil
-			case strings.Contains(s, c3):
-				return `{"number":43,"title":"Add UI","state":"OPEN","isDraft":true,"mergeStateStatus":"DRAFT","reviewDecision":"","statusCheckRollup":[]}`, nil
+			case strings.Contains(s, branch1):
+				return `{"number":41,"title":"Add model","state":"OPEN","mergeable":"MERGEABLE","reviewDecision":"APPROVED","statusCheckRollup":[{"state":"SUCCESS"}]}`, nil
+			case strings.Contains(s, branch2):
+				return `{"number":42,"title":"Add API","state":"OPEN","mergeable":"MERGEABLE","reviewDecision":"APPROVED","statusCheckRollup":[{"state":"PENDING"}]}`, nil
+			case strings.Contains(s, branch3):
+				return `{"number":43,"title":"Add UI","state":"OPEN","isDraft":true,"mergeable":"CONFLICTING","reviewDecision":"","statusCheckRollup":[]}`, nil
 			}
 		}
 		return "", nil
@@ -202,8 +202,8 @@ func TestStatusOutput(t *testing.T) {
 		t.Fatalf("code %d err=%s", code, errb.String())
 	}
 	want := `mystack  (base: main)
-  ➖➖📝❌ #43     C3 Add UI
-  ⏳✅✅✅ #42     C2 Add API
+  ➖➖❌❌ #43     C3 Add UI
+  ⌛✅✅✅ #42     C2 Add API
   ✅✅✅✅ #41     C1 Add model
    │ │ │ └─ stack: all PRs below are ready
    │ │ └─── conflicts: no merge conflicts

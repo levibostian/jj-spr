@@ -99,36 +99,27 @@ func checksBit(p *gh.PR) string {
 	return bit
 }
 
+// reviewBit mirrors spr: a missing required review blocks a PR just like
+// requested changes, so both render red.
 func reviewBit(p *gh.PR) string {
 	switch strings.ToUpper(p.ReviewDecision) {
 	case "APPROVED":
 		return "approved"
-	case "CHANGES_REQUESTED":
+	case "CHANGES_REQUESTED", "REVIEW_REQUIRED":
 		return "changes"
-	case "REVIEW_REQUIRED":
-		return "required"
 	default:
 		return "none"
 	}
 }
 
+// mergeBit mirrors spr's NoConflicts bit: a PR is conflict-free only when
+// GitHub reports it as mergeable. Draft, behind, blocked and unstable do not
+// count as conflicts.
 func mergeBit(p *gh.PR) string {
-	switch strings.ToUpper(p.MergeStateStatus) {
-	case "CLEAN":
+	if strings.EqualFold(p.Mergeable, "MERGEABLE") {
 		return "clean"
-	case "DIRTY":
-		return "conflicts"
-	case "BLOCKED":
-		return "blocked"
-	case "DRAFT":
-		return "draft"
-	case "BEHIND":
-		return "behind"
-	case "UNSTABLE":
-		return "unstable"
-	default:
-		return "unknown"
 	}
+	return "conflicts"
 }
 
 // Render writes a human-readable status table.
@@ -198,22 +189,20 @@ func (b Bits) String() string {
 	return emoji(b.Checks) + emoji(b.Review) + emoji(b.Merge) + emoji(b.Stack)
 }
 
+// emoji matches the status-bit icons spr uses: ✅ pass, ❌ fail, ⌛ pending,
+// ➖ not required, ❓ unknown.
 func emoji(kind string) string {
 	switch kind {
 	case "pass", "approved", "clean", "clear":
 		return "✅"
 	case "fail", "changes", "conflicts", "blocked":
 		return "❌"
-	case "pending", "required", "behind":
-		return "⏳"
-	case "draft":
-		return "📝"
-	case "unstable":
-		return "⚠️"
+	case "pending":
+		return "⌛"
 	case "none":
 		return "➖"
 	default:
-		return "❔"
+		return "❓"
 	}
 }
 

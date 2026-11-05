@@ -34,13 +34,13 @@ func TestChecksBit(t *testing.T) {
 func TestReviewAndMergeBits(t *testing.T) {
 	if reviewBit(&gh.PR{ReviewDecision: "APPROVED"}) != "approved" ||
 		reviewBit(&gh.PR{ReviewDecision: "CHANGES_REQUESTED"}) != "changes" ||
+		reviewBit(&gh.PR{ReviewDecision: "REVIEW_REQUIRED"}) != "changes" ||
 		reviewBit(&gh.PR{}) != "none" {
 		t.Fatal("review bits wrong")
 	}
-	if mergeBit(&gh.PR{MergeStateStatus: "CLEAN"}) != "clean" ||
-		mergeBit(&gh.PR{MergeStateStatus: "DIRTY"}) != "conflicts" ||
-		mergeBit(&gh.PR{MergeStateStatus: "DRAFT"}) != "draft" ||
-		mergeBit(&gh.PR{}) != "unknown" {
+	if mergeBit(&gh.PR{Mergeable: "MERGEABLE"}) != "clean" ||
+		mergeBit(&gh.PR{Mergeable: "CONFLICTING"}) != "conflicts" ||
+		mergeBit(&gh.PR{}) != "conflicts" {
 		t.Fatal("merge bits wrong")
 	}
 }
