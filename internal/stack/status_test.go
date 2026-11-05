@@ -98,6 +98,11 @@ func TestBuildReport(t *testing.T) {
 	if strings.Contains(out, "mystack-C1") {
 		t.Fatalf("branch should not render: %s", out)
 	}
+	for _, label := range []string{"checks:", "approval:", "conflicts:", "stack:"} {
+		if !strings.Contains(out, label) {
+			t.Fatalf("legend missing %q: %s", label, out)
+		}
+	}
 	b, err := r.JSON()
 	if err != nil || !strings.Contains(string(b), "mystack") {
 		t.Fatalf("json %s %v", b, err)

@@ -158,6 +158,62 @@ func TestStatusWiring(t *testing.T) {
 	}
 }
 
+// TestStatusOutput pins the exact stdout of `status`: the rows followed by the
+// legend, whose connectors line up under the last row's emojis.
+func TestStatusOutput(t *testing.T) {
+	app, f, out, errb := newTestApp()
+	f.Handler = func(c runner.Command) (string, error) {
+		s := c.String()
+		switch {
+		case strings.Contains(s, "git remote list"):
+			return "origin git@github.com:me/repo.git\n", nil
+		case strings.Contains(s, "remote_bookmarks"):
+			return "main\n", nil
+		case strings.Contains(s, "bookmark list"):
+			return "mystack\tC3\nmystack-C1\tC1\nmystack-C2\tC2\nmystack-C3\tC3\n", nil
+		case strings.Contains(s, "~::"):
+			return "C3\x1fmystack\n", nil
+		case strings.Contains(s, "jj log"):
+			return jjLine("C1", "Add model\n") + jjLine("C2", "Add API\n") + jjLine("C3", "Add UI\n"), nil
+		case strings.Contains(s, "pulls"):
+			switch {
+			case strings.Contains(s, "mystack-C1"):
+				return `[{"number":41,"state":"open","head":{"ref":"mystack-C1"},"base":{"ref":"main"}}]`, nil
+			case strings.Contains(s, "mystack-C2"):
+				return `[{"number":42,"state":"open","head":{"ref":"mystack-C2"},"base":{"ref":"main"}}]`, nil
+			case strings.Contains(s, "mystack-C3"):
+				return `[{"number":43,"state":"open","head":{"ref":"mystack-C3"},"base":{"ref":"main"}}]`, nil
+			}
+			return "[]", nil
+		case strings.Contains(s, "pr view"):
+			switch {
+			case strings.Contains(s, "mystack-C1"):
+				return `{"number":41,"title":"Add model","state":"OPEN","mergeStateStatus":"CLEAN","reviewDecision":"APPROVED","statusCheckRollup":[{"state":"SUCCESS"}]}`, nil
+			case strings.Contains(s, "mystack-C2"):
+				return `{"number":42,"title":"Add API","state":"OPEN","mergeStateStatus":"CLEAN","reviewDecision":"APPROVED","statusCheckRollup":[{"state":"PENDING"}]}`, nil
+			case strings.Contains(s, "mystack-C3"):
+				return `{"number":43,"title":"Add UI","state":"OPEN","isDraft":true,"mergeStateStatus":"DRAFT","reviewDecision":"","statusCheckRollup":[]}`, nil
+			}
+		}
+		return "", nil
+	}
+	if code := app.Run(context.Background(), []string{"status", "--base", "main"}); code != 0 {
+		t.Fatalf("code %d err=%s", code, errb.String())
+	}
+	want := `mystack  (base: main)
+  ✅✅✅✅ #41     C1 Add model
+  ⏳✅✅✅ #42     C2 Add API
+  ➖➖📝❌ #43     C3 Add UI
+   │ │ │ └─ stack: all PRs below are ready
+   │ │ └─── conflicts: no merge conflicts
+   │ └───── approval: PR is approved
+   └─────── checks: CI checks pass
+`
+	if out.String() != want {
+		t.Errorf("status stdout:\n--- got ---\n%s\n--- want ---\n%s", out.String(), want)
+	}
+}
+
 func TestStatusJSON(t *testing.T) {
 	app, f, out, _ := newTestApp()
 	linked, creates := false, 0

@@ -145,6 +145,15 @@ func Render(w io.Writer, r *Report) {
 		fmt.Fprintf(w, "  %s %-7s %s %s\n",
 			row.Bits.String(), label, shortID(row.Entry.Commit, color), row.Entry.Commit.Title())
 	}
+	if len(r.Rows) > 0 {
+		// Legend for the four status columns. Printed after the rows with
+		// connectors aligned under the last row's emojis.
+		fmt.Fprint(w,
+			"   │ │ │ └─ stack: all PRs below are ready\n"+
+				"   │ │ └─── conflicts: no merge conflicts\n"+
+				"   │ └───── approval: PR is approved\n"+
+				"   └─────── checks: CI checks pass\n")
+	}
 }
 
 // shortID renders the abbreviated change ID, highlighting the shortest

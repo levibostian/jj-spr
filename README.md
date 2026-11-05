@@ -71,6 +71,10 @@ mystack  (base: main)
   ✅✅✅✅ #41     qpvuntsm Add model
   ✅⏳✅✅ #42     rlvkypqw Add API
   ➖➖📝❌ #43     zmylxtxx Add UI
+   │ │ │ └─ stack: all PRs below are ready
+   │ │ └─── conflicts: no merge conflicts
+   │ └───── approval: PR is approved
+   └─────── checks: CI checks pass
 ```
 
 The first column after the PR number is the change ID, abbreviated to the
