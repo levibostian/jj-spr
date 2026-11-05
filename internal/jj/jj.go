@@ -149,14 +149,16 @@ func (c *Client) StackBookmark(ctx context.Context, base string) (Bookmark, erro
 	// the user bookmark is the stack.
 	var name string
 	var nearest Bookmark
+	// .name() avoids jj's display marker ("*") that bookmarks.join adds for a
+	// local bookmark that diverged from its remote.
+	const logTemplate = `change_id ++ "\x1f" ++ bookmarks.map(|b| b.name()).join(" ") ++ "\n"`
 	for _, revset := range []string{
 		"heads(bookmarks() & ::@ & ~::" + base + ")",
 		"roots(bookmarks() & @:: & ~::@ & ~::" + base + ")",
 	} {
 		out, err := c.R.Run(ctx, runner.Command{
 			Name: "jj",
-			Args: []string{"log", "--no-graph", "-r", revset, "-T",
-				`change_id ++ "\x1f" ++ bookmarks.join(" ") ++ "\n"`},
+			Args: []string{"log", "--no-graph", "-r", revset, "-T", logTemplate},
 		})
 		if err != nil {
 			return Bookmark{}, err
@@ -209,7 +211,7 @@ func (c *Client) StackBookmark(ctx context.Context, base string) (Bookmark, erro
 		Name: "jj",
 		Args: []string{"log", "--no-graph", "-r",
 			"heads(bookmarks() & (::@ | @::) & ~::" + base + ")",
-			"-T", `change_id ++ "\x1f" ++ bookmarks.join(" ") ++ "\n"`},
+			"-T", logTemplate},
 	})
 	if err != nil {
 		return Bookmark{}, err
