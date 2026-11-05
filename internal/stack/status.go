@@ -135,7 +135,10 @@ func mergeBit(p *gh.PR) string {
 func Render(w io.Writer, r *Report) {
 	color := colorEnabled(w)
 	fmt.Fprintf(w, "%s  (base: %s)\n", r.Stack.Bookmark, r.Stack.BaseBranch)
-	for _, row := range r.Rows {
+	// Newest PR first. Rows are stored bottom-to-top so the Stack bit can look
+	// at the PRs below; render walks them backwards.
+	for i := len(r.Rows) - 1; i >= 0; i-- {
+		row := r.Rows[i]
 		label := "no PR"
 		if row.Detail != nil {
 			label = fmt.Sprintf("#%d", row.Detail.Number)
@@ -145,15 +148,16 @@ func Render(w io.Writer, r *Report) {
 		fmt.Fprintf(w, "  %s %-7s %s %s\n",
 			row.Bits.String(), label, shortID(row.Entry.Commit, color), row.Entry.Commit.Title())
 	}
-	if len(r.Rows) > 0 {
-		// Legend for the four status columns. Printed after the rows with
-		// connectors aligned under the last row's emojis.
-		fmt.Fprint(w,
-			"   │ │ │ └─ stack: all PRs below are ready\n"+
-				"   │ │ └─── conflicts: no merge conflicts\n"+
-				"   │ └───── approval: PR is approved\n"+
-				"   └─────── checks: CI checks pass\n")
+	if len(r.Rows) == 0 {
+		return
 	}
+	// Legend for the four status columns. Printed after the rows with
+	// connectors aligned under the last row's emojis.
+	fmt.Fprint(w,
+		"   │ │ │ └─ stack: all PRs below are ready\n"+
+			"   │ │ └─── conflicts: no merge conflicts\n"+
+			"   │ └───── approval: PR is approved\n"+
+			"   └─────── checks: CI checks pass\n")
 }
 
 // shortID renders the abbreviated change ID, highlighting the shortest
