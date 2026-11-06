@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/levibostian/jj-spr/internal/config"
 	"github.com/levibostian/jj-spr/internal/gh"
 	"github.com/levibostian/jj-spr/internal/jj"
 	"github.com/levibostian/jj-spr/internal/runner"
@@ -17,14 +18,16 @@ import (
 
 // App is the command-line application. Fields are swapped in tests.
 type App struct {
-	Runner runner.Runner
-	Stdout io.Writer
-	Stderr io.Writer
+	Runner  runner.Runner
+	Stdout  io.Writer
+	Stderr  io.Writer
+	HomeDir string
 }
 
 // New returns an App that runs real commands.
 func New() *App {
-	return &App{Runner: runner.Exec{}, Stdout: os.Stdout, Stderr: os.Stderr}
+	home, _ := os.UserHomeDir()
+	return &App{Runner: runner.Exec{}, Stdout: os.Stdout, Stderr: os.Stderr, HomeDir: home}
 }
 
 type flags struct {
@@ -129,6 +132,22 @@ func (a *App) clients(ctx context.Context, f flags) (*jj.Client, *gh.Client, err
 	return jjc, ghc, nil
 }
 
+// applyConfig overlays the .spr.yml settings onto the flags. Today only the
+// default reviewers are consumed; the --reviewer flag adds to them, matching
+// spr's config-then-flag order.
+func (a *App) applyConfig(ctx context.Context, jjc *jj.Client, opts *stack.Options) error {
+	root, err := jjc.Root(ctx)
+	if err != nil {
+		return err
+	}
+	cfg, err := config.Load(root, a.HomeDir)
+	if err != nil {
+		return err
+	}
+	opts.Reviewers = append(cfg.Repo.DefaultReviewers, opts.Reviewers...)
+	return nil
+}
+
 func (a *App) update(ctx context.Context, args []string) int {
 	f, err := a.parse("update", args)
 	if err != nil {
@@ -140,6 +159,10 @@ func (a *App) update(ctx context.Context, args []string) int {
 		return 1
 	}
 	if err := ghc.Available(ctx); err != nil {
+		fmt.Fprintln(a.Stderr, "error:", err)
+		return 1
+	}
+	if err := a.applyConfig(ctx, jjc, &f.opts); err != nil {
 		fmt.Fprintln(a.Stderr, "error:", err)
 		return 1
 	}
@@ -163,6 +186,10 @@ func (a *App) sync(ctx context.Context, args []string) int {
 		return 1
 	}
 	if err := ghc.Available(ctx); err != nil {
+		fmt.Fprintln(a.Stderr, "error:", err)
+		return 1
+	}
+	if err := a.applyConfig(ctx, jjc, &f.opts); err != nil {
 		fmt.Fprintln(a.Stderr, "error:", err)
 		return 1
 	}
