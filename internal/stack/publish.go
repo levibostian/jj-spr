@@ -14,6 +14,7 @@ type Result struct {
 	Updated     []int
 	Retired     []int
 	StackNumber int
+	StackPRs    []int
 }
 
 // Update resolves the stack and publishes it.
@@ -67,6 +68,7 @@ func publish(ctx context.Context, jjc *jj.Client, ghc *gh.Client, st *Stack, opt
 		return nil, err
 	}
 	res.StackNumber = stackNumber
+	res.StackPRs = prs
 	return res, nil
 }
 

@@ -71,6 +71,11 @@ func ParseRemote(remoteURL string) (Repo, error) {
 	return Repo{Owner: owner, Name: name}, nil
 }
 
+// PRURL is the web URL of a pull request in this repository.
+func (r Repo) PRURL(number int) string {
+	return fmt.Sprintf("https://github.com/%s/%s/pull/%d", r.Owner, r.Name, number)
+}
+
 // run executes a gh command with GH_REPO set from the resolved remote.
 func (c *Client) run(ctx context.Context, stdin string, args ...string) (string, error) {
 	cmd := runner.Command{Name: "gh", Args: args, Stdin: stdin}
