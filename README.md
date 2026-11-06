@@ -89,6 +89,7 @@ first line of the commit description.
 | `--base <branch>` | `trunk()` | Base branch/bookmark of the bottom PR and of the jj commit range. |
 | `--remote <name>` | `origin` | Remote to fetch/push. |
 | `--draft` | off | Create new PRs as drafts. |
+| `-r, --reviewer <handle>` | none | Request reviews from these users/teams on newly created PRs. Repeatable; accepts comma-separated values. |
 | `--json` | off | `status`: machine-readable output. |
 | `-v` | off | Log every `jj`/`gh` command. |
 

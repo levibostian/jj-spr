@@ -43,10 +43,11 @@ func (s *Stack) Active() []Entry {
 
 // Options are the user-supplied knobs shared by all commands.
 type Options struct {
-	Stack  string
-	Base   string
-	Remote string
-	Draft  bool
+	Stack     string
+	Base      string
+	Remote    string
+	Draft     bool
+	Reviewers []string
 }
 
 func (o Options) remote() string {

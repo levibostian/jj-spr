@@ -80,18 +80,21 @@ func TestFindPRNone(t *testing.T) {
 
 func TestCreatePR(t *testing.T) {
 	c, f := newClient(func(runner.Command) (string, error) { return "https://github.com/o/r/pull/7\n", nil })
-	n, err := c.CreatePR(context.Background(), "mystack/x", "main", "title", "body", true)
+	n, err := c.CreatePR(context.Background(), "mystack/x", "main", "title", "body", true, []string{"alice", "acme/team"})
 	if err != nil || n != 7 {
 		t.Fatalf("got %d %v", n, err)
 	}
 	if !strings.Contains(f.Calls[0].String(), "--draft") || f.Calls[0].Stdin != "body" {
 		t.Fatalf("got %+v", f.Calls[0])
 	}
+	if !strings.Contains(f.Calls[0].String(), "--reviewer alice") || !strings.Contains(f.Calls[0].String(), "--reviewer acme/team") {
+		t.Fatalf("got %+v", f.Calls[0])
+	}
 }
 
 func TestCreatePRBadOutput(t *testing.T) {
 	c, _ := newClient(func(runner.Command) (string, error) { return "nope", nil })
-	if _, err := c.CreatePR(context.Background(), "h", "b", "t", "", false); err == nil {
+	if _, err := c.CreatePR(context.Background(), "h", "b", "t", "", false, nil); err == nil {
 		t.Fatal("want error")
 	}
 }

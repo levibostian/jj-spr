@@ -56,7 +56,7 @@ func publish(ctx context.Context, jjc *jj.Client, ghc *gh.Client, st *Stack, opt
 
 	prs := make([]int, 0, len(active))
 	for i, e := range active {
-		number, err := ensurePR(ctx, ghc, e, desiredBase(st, active, i), opts.Draft, res)
+		number, err := ensurePR(ctx, ghc, e, desiredBase(st, active, i), opts.Draft, opts.Reviewers, res)
 		if err != nil {
 			return nil, err
 		}
@@ -72,13 +72,13 @@ func publish(ctx context.Context, jjc *jj.Client, ghc *gh.Client, st *Stack, opt
 	return res, nil
 }
 
-func ensurePR(ctx context.Context, ghc *gh.Client, e Entry, base string, draft bool, res *Result) (int, error) {
+func ensurePR(ctx context.Context, ghc *gh.Client, e Entry, base string, draft bool, reviewers []string, res *Result) (int, error) {
 	title, body := e.Commit.Title(), e.Commit.Body()
 	if title == "" {
 		title = string(e.Commit.ChangeID)
 	}
 	if e.PR == nil {
-		number, err := ghc.CreatePR(ctx, e.Branch, base, title, body, draft)
+		number, err := ghc.CreatePR(ctx, e.Branch, base, title, body, draft, reviewers)
 		if err != nil {
 			return 0, err
 		}

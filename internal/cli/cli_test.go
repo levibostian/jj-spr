@@ -115,6 +115,31 @@ func TestUpdateWiring(t *testing.T) {
 	}
 }
 
+func TestUpdateReviewerFlag(t *testing.T) {
+	app, f, _, errb := newTestApp()
+	linked, creates := false, 0
+	f.Handler = fullHandler(&linked, &creates, false)
+	if code := app.Run(context.Background(), []string{"update", "--base", "main", "-r", "alice", "--reviewer", "bob,acme/team"}); code != 0 {
+		t.Fatalf("code %d err=%s", code, errb.String())
+	}
+	var createCalls []string
+	for _, c := range f.Calls {
+		if strings.Contains(c.String(), "pr create") {
+			createCalls = append(createCalls, c.String())
+		}
+	}
+	if len(createCalls) != 2 {
+		t.Fatalf("create calls %v", createCalls)
+	}
+	for _, call := range createCalls {
+		for _, want := range []string{"--reviewer alice", "--reviewer bob", "--reviewer acme/team"} {
+			if !strings.Contains(call, want) {
+				t.Fatalf("call %q missing %q", call, want)
+			}
+		}
+	}
+}
+
 func TestUpdateError(t *testing.T) {
 	app, f, _, errb := newTestApp()
 	f.Handler = func(c runner.Command) (string, error) {
