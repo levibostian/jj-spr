@@ -263,6 +263,17 @@ func TestMatch(t *testing.T) {
 	}
 }
 
+func TestRoot(t *testing.T) {
+	c, f := newClient(t, "/repo/root\n", nil)
+	root, err := c.Root(context.Background())
+	if err != nil || root != "/repo/root" {
+		t.Fatalf("got %q %v", root, err)
+	}
+	if f.Calls[0].String() != "jj root" {
+		t.Fatalf("got %q", f.Calls[0].String())
+	}
+}
+
 func TestConflicts(t *testing.T) {
 	c, _ := newClient(t, "aaa\nbbb\n", nil)
 	got, err := c.Conflicts(context.Background(), "trunk()..H")

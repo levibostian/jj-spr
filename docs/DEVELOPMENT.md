@@ -12,6 +12,9 @@ The tool is a thin orchestrator over the `jj` and `gh` CLIs.
 - `internal/gh`: typed wrappers for gh commands (PR lookup/create/edit, stack
   create/link/unstack). Resolves `owner/repo` from the remote and pins it on
   every call as `GH_REPO`.
+- `internal/config`: reads `.spr.yml` from the jj workspace root and the home
+  directory into structs that match spr's schema, so the same file works with
+  both tools. Missing files fall back to spr's defaults.
 - `internal/stack`: domain logic. `Resolve` builds a `Stack` from a bookmark,
   `publish` pushes and reconciles PRs, `Sync` fetches/rebases, `BuildReport`
   renders status.

@@ -260,6 +260,16 @@ func (c *Client) Workspace(ctx context.Context) (string, error) {
 	return "", nil
 }
 
+// Root returns the root directory of the current jj workspace. It is used to
+// find the repository's .spr.yml.
+func (c *Client) Root(ctx context.Context) (string, error) {
+	out, err := c.R.Run(ctx, runner.Command{Name: "jj", Args: []string{"root"}})
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(out), nil
+}
+
 // SetBookmark points a local bookmark at a change, creating it if needed.
 func (c *Client) SetBookmark(ctx context.Context, name, changeID string) error {
 	_, err := c.R.Run(ctx, runner.Command{
