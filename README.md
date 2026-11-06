@@ -124,5 +124,5 @@ See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for architecture and testing note
 Here is the current status of this codebase: 
 
 - [ ] **Exploration/POC** - Good chance ai wrote some or all of the tool and code partially/not reviewed. Project probably in very early stages. 
-- [X] **I use this tool** - Ai wrote some percentage of code and code partially reviewed. I trust code myself that I use this tool, but I wouldn't put my own stamp of approval on this project yet. 
+- [X] **I use this tool** - Ai wrote some percentage of code and code partially reviewed. Personal project at the moment. 
 - [ ] **I maintain this tool** - Ai may have been used to write code, all code has been reviewed. I put my stamp of approval on this code and would love for you to give this project a try!
