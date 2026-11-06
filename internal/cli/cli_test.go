@@ -106,8 +106,12 @@ func TestUpdateWiring(t *testing.T) {
 	if code := app.Run(context.Background(), []string{"update", "--base", "main"}); code != 0 {
 		t.Fatalf("code %d, out=%s", code, out.String())
 	}
-	if !strings.Contains(out.String(), "created") || !strings.Contains(out.String(), "stack: #9") {
+	if !strings.Contains(out.String(), "created:") || !strings.Contains(out.String(), "stack: #9") {
 		t.Fatalf("out %q", out.String())
+	}
+	if !strings.Contains(out.String(), "https://github.com/me/repo/pull/1") ||
+		!strings.Contains(out.String(), "https://github.com/me/repo/pull/2") {
+		t.Fatalf("want clickable PR URLs, out %q", out.String())
 	}
 }
 

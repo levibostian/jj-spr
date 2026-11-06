@@ -150,7 +150,9 @@ func TestEndToEndUpdate(t *testing.T) {
 	if code := app.Run(context.Background(), []string{"update", "--base", "main"}); code != 0 {
 		t.Fatalf("code %d stderr=%s", code, errb.String())
 	}
-	if !strings.Contains(out.String(), "created: [101 102 103]") {
+	if !strings.Contains(out.String(), "created:") ||
+		!strings.Contains(out.String(), "https://github.com/levibostian/temp-test-jj-spr/pull/101") ||
+		!strings.Contains(out.String(), "https://github.com/levibostian/temp-test-jj-spr/pull/103") {
 		t.Fatalf("out %q", out.String())
 	}
 }

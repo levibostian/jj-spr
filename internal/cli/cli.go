@@ -130,7 +130,7 @@ func (a *App) update(ctx context.Context, args []string) int {
 		fmt.Fprintln(a.Stderr, "error:", err)
 		return 1
 	}
-	a.printResult(res)
+	a.printResult(res, ghc.Repo)
 	return 0
 }
 
@@ -153,7 +153,7 @@ func (a *App) sync(ctx context.Context, args []string) int {
 		fmt.Fprintln(a.Stderr, "error:", err)
 		return 1
 	}
-	a.printResult(res)
+	a.printResult(res, ghc.Repo)
 	return 0
 }
 
@@ -185,22 +185,30 @@ func (a *App) status(ctx context.Context, args []string) int {
 	return 0
 }
 
-func (a *App) printResult(res *stack.Result) {
+// printResult reports what a publish run changed, as clickable GitHub URLs.
+// The native stack has no web URL of its own, so it is shown as the ordered
+// member PRs (bottom to top).
+func (a *App) printResult(res *stack.Result, repo gh.Repo) {
 	lines := 0
-	if len(res.Created) > 0 {
-		fmt.Fprintf(a.Stdout, "created: %v\n", res.Created)
+	printURLs := func(numbers []int) {
+		for _, n := range numbers {
+			fmt.Fprintf(a.Stdout, "  %s\n", repo.PRURL(n))
+		}
+	}
+	printPRs := func(label string, numbers []int) {
+		if len(numbers) == 0 {
+			return
+		}
+		fmt.Fprintf(a.Stdout, "%s:\n", label)
+		printURLs(numbers)
 		lines++
 	}
-	if len(res.Updated) > 0 {
-		fmt.Fprintf(a.Stdout, "updated: %v\n", res.Updated)
-		lines++
-	}
-	if len(res.Retired) > 0 {
-		fmt.Fprintf(a.Stdout, "retired (merged/closed): %v\n", res.Retired)
-		lines++
-	}
+	printPRs("created", res.Created)
+	printPRs("updated", res.Updated)
+	printPRs("retired (merged/closed)", res.Retired)
 	if res.StackNumber > 0 {
-		fmt.Fprintf(a.Stdout, "stack: #%d\n", res.StackNumber)
+		fmt.Fprintf(a.Stdout, "stack: #%d (bottom to top)\n", res.StackNumber)
+		printURLs(res.StackPRs)
 		lines++
 	}
 	if lines == 0 {
