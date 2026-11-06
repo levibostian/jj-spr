@@ -350,6 +350,38 @@ func callsContain(f *runner.Fake, sub string) bool {
 	return false
 }
 
+func TestPublishPassesReviewers(t *testing.T) {
+	bookmarks := "mystack\tC1\nmystack-C1\tC1\n"
+	logOut := commitLine("C1", "Add model\n", false)
+	handler := func(c runner.Command) (string, error) {
+		switch {
+		case commandContains(c, "log", "remote_bookmarks"):
+			return "main\n", nil
+		case commandContains(c, "bookmark", "list"):
+			return bookmarks, nil
+		case commandContains(c, "log") && strings.Contains(c.String(), "~::trunk()"):
+			return "C1\x1fmystack\n", nil
+		case commandContains(c, "log"):
+			return logOut, nil
+		case commandContains(c, "pulls"):
+			return "[]", nil
+		case commandContains(c, "stacks?pull_request"):
+			return "[]", nil
+		case commandContains(c, "pr create"):
+			return "https://github.com/me/repo/pull/1\n", nil
+		}
+		return "", nil
+	}
+	jjc, ghc, _ := clients(handler)
+	f := jjc.R.(*runner.Fake)
+	if _, err := Update(context.Background(), jjc, ghc, Options{Reviewers: []string{"alice", "acme/team"}}); err != nil {
+		t.Fatal(err)
+	}
+	if !callsContain(f, "pr create --head mystack-C1 --base main --title Add model --body-file - --reviewer alice --reviewer acme/team") {
+		t.Fatalf("missing reviewer args: %v", f.Calls)
+	}
+}
+
 func TestPublishCreatesPRsAndStack(t *testing.T) {
 	bookmarks := "mystack\tC2\nmystack-C1\tC1\nmystack-C2\tC2\n"
 	logOut := commitLine("C1", "Add model\n", false) + commitLine("C2", "Add API\n", false)

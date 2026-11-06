@@ -148,11 +148,15 @@ func (c *Client) FindPR(ctx context.Context, owner, branch string) (*PR, error) 
 	}, nil
 }
 
-// CreatePR opens a PR and returns its number.
-func (c *Client) CreatePR(ctx context.Context, head, base, title, body string, draft bool) (int, error) {
+// CreatePR opens a PR and returns its number. Reviewers are requested by
+// handle (user login or org/team); gh resolves them and requests the reviews.
+func (c *Client) CreatePR(ctx context.Context, head, base, title, body string, draft bool, reviewers []string) (int, error) {
 	args := []string{"pr", "create", "--head", head, "--base", base, "--title", title, "--body-file", "-"}
 	if draft {
 		args = append(args, "--draft")
+	}
+	for _, r := range reviewers {
+		args = append(args, "--reviewer", r)
 	}
 	out, err := c.run(ctx, body, args...)
 	if err != nil {

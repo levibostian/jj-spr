@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/levibostian/jj-spr/internal/gh"
 	"github.com/levibostian/jj-spr/internal/jj"
@@ -30,6 +31,21 @@ type flags struct {
 	opts    stack.Options
 	json    bool
 	verbose bool
+}
+
+// stringList collects a repeatable string flag. A single value may also be
+// comma-separated, matching gh's --reviewer.
+type stringList []string
+
+func (s *stringList) String() string { return strings.Join(*s, ",") }
+
+func (s *stringList) Set(v string) error {
+	for _, part := range strings.Split(v, ",") {
+		if part = strings.TrimSpace(part); part != "" {
+			*s = append(*s, part)
+		}
+	}
+	return nil
 }
 
 // Run dispatches a command and returns the process exit code.
@@ -66,7 +82,7 @@ Usage:
   jj-spr status   show the stack and per-PR status
   jj-spr sync     fetch, rebase onto trunk, then update
 
-Flags: --stack <bookmark>  --base <branch>  --remote <name>  --draft  --json  -v
+Flags: --stack <bookmark>  --base <branch>  --remote <name>  --draft  -r/--reviewer <handle>  --json  -v
 `)
 }
 
@@ -78,6 +94,8 @@ func (a *App) parse(name string, args []string) (flags, error) {
 	fs.StringVar(&f.opts.Base, "base", "", "base branch or bookmark (default: jj trunk())")
 	fs.StringVar(&f.opts.Remote, "remote", "origin", "remote name")
 	fs.BoolVar(&f.opts.Draft, "draft", false, "create new PRs as drafts")
+	fs.Var((*stringList)(&f.opts.Reviewers), "reviewer", "request reviews from these handles on new PRs (repeatable, comma-separated)")
+	fs.Var((*stringList)(&f.opts.Reviewers), "r", "shorthand for --reviewer")
 	fs.BoolVar(&f.json, "json", false, "status: output JSON")
 	fs.BoolVar(&f.verbose, "v", false, "log jj/gh commands")
 	if err := fs.Parse(args); err != nil {
