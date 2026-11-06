@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func write(t *testing.T, dir, name, body string) {
+func writeFile(t *testing.T, dir, name, body string) {
 	t.Helper()
 	if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o644); err != nil {
 		t.Fatal(err)
@@ -48,7 +48,7 @@ func TestLoadEmptyPaths(t *testing.T) {
 
 func TestLoadRepoFile(t *testing.T) {
 	repo := t.TempDir()
-	write(t, repo, ".spr.yml", `githubRemote: upstream
+	writeFile(t, repo, ".spr.yml", `githubRemote: upstream
 defaultReviewers:
   - teammate
   - acme/team
@@ -72,7 +72,7 @@ mergeMethod: squash
 
 func TestLoadUserFile(t *testing.T) {
 	home := t.TempDir()
-	write(t, home, ".spr.yml", `createDraftPRs: true
+	writeFile(t, home, ".spr.yml", `createDraftPRs: true
 branchPrefix: mystack
 `)
 	cfg, err := Load("", home)
@@ -89,8 +89,8 @@ branchPrefix: mystack
 
 func TestLoadRepoAndUserFiles(t *testing.T) {
 	repo, home := t.TempDir(), t.TempDir()
-	write(t, repo, ".spr.yml", "defaultReviewers:\n  - teammate\n")
-	write(t, home, ".spr.yml", "showCommitID: true\n")
+	writeFile(t, repo, ".spr.yml", "defaultReviewers:\n  - teammate\n")
+	writeFile(t, home, ".spr.yml", "showCommitID: true\n")
 	cfg, err := Load(repo, home)
 	if err != nil {
 		t.Fatal(err)
@@ -102,7 +102,7 @@ func TestLoadRepoAndUserFiles(t *testing.T) {
 
 func TestLoadBadYAML(t *testing.T) {
 	repo := t.TempDir()
-	write(t, repo, ".spr.yml", "defaultReviewers: [unterminated\n")
+	writeFile(t, repo, ".spr.yml", "defaultReviewers: [unterminated\n")
 	if _, err := Load(repo, ""); err == nil {
 		t.Fatal("want error")
 	}
@@ -112,7 +112,7 @@ func TestLoadBadYAML(t *testing.T) {
 // .spr.yml keeps working.
 func TestLoadMatchesSprSchema(t *testing.T) {
 	repo := t.TempDir()
-	write(t, repo, ".spr.yml", `githubRepoOwner: o
+	writeFile(t, repo, ".spr.yml", `githubRepoOwner: o
 githubRepoName: r
 githubHost: github.com
 githubRemote: origin

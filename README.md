@@ -93,6 +93,23 @@ first line of the commit description.
 | `--json` | off | `status`: machine-readable output. |
 | `-v` | off | Log every `jj`/`gh` command. |
 
+## Configuration
+
+`jj-spr` reads the same `.spr.yml` as [`spr`](https://github.com/ejoffe/spr),
+so one file configures both tools. Put it in the root of your jj workspace.
+Only `defaultReviewers` is used today:
+
+```yaml
+# .spr.yml
+defaultReviewers:
+  - teammate
+  - acme/team
+```
+
+Reviewers are requested on newly created PRs only. `--reviewer` adds to this
+list for a single run; it does not change the file. A malformed file stops the
+run with an error; a missing file just uses defaults.
+
 ## Development
 
 ```sh

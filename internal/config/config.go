@@ -18,6 +18,9 @@ type Config struct {
 	User *UserConfig
 }
 
+// sprConfigFile is the config file name, shared with ejoffe/spr.
+const sprConfigFile = ".spr.yml"
+
 // RepoConfig mirrors the repository-level .spr.yml, committed next to the code.
 type RepoConfig struct {
 	GitHubRepoOwner string `yaml:"githubRepoOwner,omitempty"`
@@ -95,12 +98,12 @@ func Default() *Config {
 func Load(repoRoot, homeDir string) (*Config, error) {
 	cfg := Default()
 	if repoRoot != "" {
-		if err := load(filepath.Join(repoRoot, ".spr.yml"), cfg.Repo); err != nil {
+		if err := load(filepath.Join(repoRoot, sprConfigFile), cfg.Repo); err != nil {
 			return nil, err
 		}
 	}
 	if homeDir != "" {
-		if err := load(filepath.Join(homeDir, ".spr.yml"), cfg.User); err != nil {
+		if err := load(filepath.Join(homeDir, sprConfigFile), cfg.User); err != nil {
 			return nil, err
 		}
 	}

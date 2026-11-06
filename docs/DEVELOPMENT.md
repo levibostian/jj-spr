@@ -53,6 +53,11 @@ mock the real binaries.
   gh call (`runner.Command.Env`); gh otherwise discovers the repository by
   shelling out to git. Never add a gh command that relies on the checkout.
 - **No local state file.** PRs are found by head branch via the pulls REST API.
+- **Reviewers are config-then-flag, on new PRs only.** `config.Load` reads
+  `defaultReviewers` from `.spr.yml`; `--reviewer` is appended to it. Both are
+  handed to `gh pr create --reviewer`, which resolves user/team handles and
+  requests the reviews. Existing PRs are never edited, matching spr and
+  avoiding review-request notification noise.
 
 ## Testing
 

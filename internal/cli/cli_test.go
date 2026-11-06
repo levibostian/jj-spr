@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -135,6 +137,32 @@ func TestUpdateReviewerFlag(t *testing.T) {
 		for _, want := range []string{"--reviewer alice", "--reviewer bob", "--reviewer acme/team"} {
 			if !strings.Contains(call, want) {
 				t.Fatalf("call %q missing %q", call, want)
+			}
+		}
+	}
+}
+
+func TestUpdateReviewersFromConfig(t *testing.T) {
+	app, f, _, errb := newTestApp()
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, ".spr.yml"), []byte("defaultReviewers:\n  - teammate\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	linked, creates := false, 0
+	base := fullHandler(&linked, &creates, false)
+	f.Handler = func(c runner.Command) (string, error) {
+		if strings.Contains(c.String(), "jj root") {
+			return dir + "\n", nil
+		}
+		return base(c)
+	}
+	if code := app.Run(context.Background(), []string{"update", "--base", "main", "-r", "extra"}); code != 0 {
+		t.Fatalf("code %d err=%s", code, errb.String())
+	}
+	for _, c := range f.Calls {
+		if strings.Contains(c.String(), "pr create") {
+			if !strings.Contains(c.String(), "--reviewer teammate") || !strings.Contains(c.String(), "--reviewer extra") {
+				t.Fatalf("call %q", c.String())
 			}
 		}
 	}
