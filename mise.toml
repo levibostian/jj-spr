@@ -1,6 +1,6 @@
 [tools]
 go = "1.27.4"
-goreleaser = "2.20.0"
+goreleaser = "2.20.2"
 packslip = "1.11.4"
 
 [tasks.format]
