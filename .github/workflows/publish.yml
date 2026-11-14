@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up tools
-        uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5
+        uses: jdx/mise-action@d5574b52816a478f9d4e6529a3f6ff17a8a36785 # v5
 
       - uses: levibostian/decaf@366970ed9e5059c9a9cf3b3237b3f19dfa0369ad # 0.17.3
         id: decaf
