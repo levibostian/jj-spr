@@ -1,7 +1,7 @@
 [tools]
 go = "1.27.4"
 goreleaser = "2.20.3"
-packslip = "1.11.4"
+packslip = "1.11.5"
 
 [tasks.format]
 description = "Format the whole Go module"
